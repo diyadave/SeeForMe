@@ -1,0 +1,80 @@
+I'm building a fully offline smart assistant app for blind users called **"SeeForMe"**.
+
+### 🧠 GOAL:
+To help visually impaired people feel emotionally supported and understand their surroundings — **through intelligent voice conversation, emotion-aware support, and real-time camera vision** — entirely **without internet**.
+
+---
+
+### 🔧 PLATFORM:
+Python, Flask (for UI), SocketIO (for UI events), OpenCV, PyTorch/ONNX, Vosk (for voice), pyttsx3 (for TTS), Ollama + Gemma 3n (for LLM), threading.
+
+---
+
+### ✅ DESIRED FEATURES (all offline):
+
+1. **🎙️ Voice-based interaction:**
+   - Uses `Vosk` + `webrtcvad` to detect when the user speaks (in English, Hindi, Gujarati)
+   - Automatically starts listening — no buttons needed
+
+2. **🧍‍♂️ When user talks about self (e.g. "how do I look", "I'm feeling", "I am sad"):**
+   - Switches to **front camera**
+   - Detects **emotion on user's face** using ONNX emotion model
+   - Responds with **empathy, support, motivational tone** using `Gemma 3n`
+
+3. **🌍 When user asks "what's around me", "who is here", "what is this place":**
+   - Switches to **back camera**
+   - Detects:
+     - Scene type (using `Places365` or object-based logic)
+     - Objects (via YOLOv8n)
+     - Any **person** in frame and their **emotion** (emotion of others!)
+   - Describes the **scene + people + emotion** conversationally using `Gemma 3n`
+
+4. **🗣️ Natural conversation with emotional context:**
+   - `Gemma 3n` gets a full prompt with:
+     - Recent conversation history
+     - User name (if known)
+     - Last known emotion (from face)
+     - Scene or object info if relevant
+   - Responds as a **compassionate friend** with warmth
+
+5. **🔄 Camera switching:**
+   - Front camera for self/emotion
+   - Back camera for world/scene
+
+6. **🗣️ TTS output:**
+   - Uses `pyttsx3` offline for English
+   - (Optionally gTTS for Hindi/Gujarati fallback, only if allowed)
+
+7. **📷 Real-time emotion detection (for user and others):**
+   - Every 2-3 seconds, front camera checks user’s face
+   - During scene description, detects if people are in view and describes their emotion too
+
+---
+
+### 🚨 What I need from you:
+Refactor my **modular app (`main.py`, `scene_detector.py`, `speech_handler.py`, etc.)** using logic from my **working prototype file (`emotion_assistant.py`)**.
+
+The working file already includes:
+- Gemma 3n integration via Ollama
+- Vosk + webrtcvad voice detection
+- Emotion detection from camera
+- TTS
+- Emotional, friend-like conversation
+
+---
+
+### 🧩 Please:
+- Reuse my modular structure
+- Fix all bugs from `main.py` (e.g., speech recognizer `.listen()` doesn't work, Gemma connector crashes, emotion never triggers)
+- Integrate emotion-aware logic from test file
+- Add threaded TTS queue to prevent `pyttsx3.run loop already started` errors
+- Make sure all components communicate asynchronously using thread-safe queues
+- Use `SocketIO` only for status updates to the UI (optional)
+
+---
+
+💡 My goal is a **fully offline, voice-activated, emotionally intelligent friend** that helps blind users in real-time — guiding them, describing their surroundings, and lifting their mood.
+
+Let me know what files or formats you need. I can share:
+- My current main app structure
+- My working single-file prototype (`emotion_assistant.py`)
