@@ -2,7 +2,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "alsa-lib", "espeak-ng", "fontconfig", "freetype", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libjpeg_turbo", "libpng", "libtiff", "libwebp", "libxcrypt", "oneDNN", "openjpeg", "openssl", "pkg-config", "portaudio", "portmidi", "postgresql", "pulseaudio", "re2", "tcl", "tk", "which", "zlib"]
+packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "alsa-lib", "espeak-ng", "fontconfig", "freetype", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libjpeg_turbo", "libpng", "libtiff", "libwebp", "libxcrypt", "oneDNN", "openjpeg", "openssl", "pkg-config", "portaudio", "portmidi", "postgresql", "pulseaudio", "re2", "tcl", "tk", "which", "zlib", "ollama"]
 
 [deployment]
 deploymentTarget = "autoscale"

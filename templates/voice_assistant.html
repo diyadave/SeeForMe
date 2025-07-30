@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeeForMe - Voice-First AI Assistant for Vision Accessibility</title>
+    
+    <!-- Bootstrap CSS with dark theme -->
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Accessibility meta tags -->
+    <meta name="description" content="SeeForMe - Voice-activated AI assistant for blind users with automatic scene analysis and emotion detection">
+    <meta name="theme-color" content="#000000">
+    
+    <style>
+        /* Voice-first design - minimal visual UI, maximum accessibility */
+        body {
+            background: #000000;
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+        
+        .voice-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .listening-animation {
+            width: 120px;
+            height: 120px;
+            border: 4px solid #00ff00;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+        
+        .listening-animation::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: pulse-inner 1.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(0, 255, 0, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 0, 0); }
+        }
+        
+        @keyframes pulse-inner {
+            from { opacity: 0.5; }
+            to { opacity: 1; }
+        }
+        
+        .status-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #00ff00;
+        }
+        
+        .instruction-text {
+            font-size: 1.1rem;
+            color: #cccccc;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .start-button {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #00ff00;
+            color: #000000;
+            border: none;
+            border-radius: 50px;
+            padding: 30px 60px;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .start-button:hover {
+            background: #00cc00;
+            transform: translate(-50%, -50%) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0, 255, 0, 0.4);
+        }
+        
+        .conversation-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 2px solid #00ff00;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+        }
+        
+        .conversation-area.active {
+            display: block;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-message {
+            border-left: 4px solid #0099ff;
+        }
+        
+        .assistant-message {
+            border-left: 4px solid #00ff00;
+        }
+        
+        /* Screen reader optimizations */
+        .sr-only {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            body {
+                background: #000000;
+                color: #ffffff;
+            }
+            .listening-animation {
+                border-color: #ffffff;
+            }
+            .listening-animation::before {
+                background: #ffffff;
+            }
+            .status-text {
+                color: #ffffff;
+            }
+        }
+        
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            .listening-animation {
+                animation: none;
+            }
+            .listening-animation::before {
+                animation: none;
+            }
+        }
+    </style>
+</head>
+<body data-bs-theme="dark">
+    <!-- Screen reader announcements -->
+    <div class="sr-only" role="status" aria-live="assertive" id="screen-reader-announcements">
+        SeeForMe voice assistant is loading
+    </div>
+    
+    <!-- Main voice interface -->
+    <main id="main-content" role="main">
+        <!-- Start button (shows initially) -->
+        <button id="start-button" class="start-button" aria-label="Start SeeForMe voice assistant">
+            <i class="fas fa-microphone me-3" aria-hidden="true"></i>
+            Start Voice Assistant
+        </button>
+        
+        <!-- Voice indicator (shows when listening) -->
+        <div id="voice-indicator" class="voice-indicator" style="display: none;">
+            <div class="listening-animation" aria-hidden="true"></div>
+            <div class="status-text" id="status-text">Listening...</div>
+            <div class="instruction-text" id="instruction-text">
+                Speak naturally. I'll understand what you need and automatically help you see or understand your surroundings.
+            </div>
+        </div>
+        
+        <!-- Conversation area -->
+        <div id="conversation-area" class="conversation-area" role="log" aria-label="Conversation with assistant">
+            <!-- Messages will be added here -->
+        </div>
+    </main>
+    
+    <!-- Hidden audio element for TTS -->
+    <audio id="tts-audio" preload="auto" style="display: none;"></audio>
+    
+    <!-- JavaScript -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <script>
+        /**
+         * Voice-First Smart Assistant
+         * Designed for blind users - automatic, intelligent, hands-free
+         */
+        class VoiceFirstAssistant {
+            constructor() {
+                this.socket = null;
+                this.recognition = null;
+                this.synthesis = null;
+                this.isListening = false;
+                this.isConnected = false;
+                this.autoMode = true;
+                
+                this.elements = {
+                    startButton: document.getElementById('start-button'),
+                    voiceIndicator: document.getElementById('voice-indicator'),
+                    statusText: document.getElementById('status-text'),
+                    instructionText: document.getElementById('instruction-text'),
+                    conversationArea: document.getElementById('conversation-area'),
+                    screenReader: document.getElementById('screen-reader-announcements'),
+                    ttsAudio: document.getElementById('tts-audio')
+                };
+                
+                this.initializeComponents();
+                this.setupEventListeners();
+                
+                console.log('🎤 Voice-First Assistant initialized');
+            }
+            
+            initializeComponents() {
+                // Initialize Socket.IO
+                this.initializeSocket();
+                
+                // Initialize Speech Recognition
+                this.initializeSpeechRecognition();
+                
+                // Initialize Speech Synthesis  
+                this.initializeSpeechSynthesis();
+            }
+            
+            setupEventListeners() {
+                this.elements.startButton.addEventListener('click', () => this.startAssistant());
+                
+                // Keyboard accessibility
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                        if (!this.isListening) {
+                            e.preventDefault();
+                            this.startAssistant();
+                        }
+                    }
+                });
+            }
+            
+            initializeSocket() {
+                try {
+                    this.socket = io();
+                    
+                    this.socket.on('connect', () => {
+                        console.log('✅ Connected to voice assistant');
+                        this.isConnected = true;
+                        this.announceToScreenReader('Connected to SeeForMe voice assistant');
+                    });
+                    
+                    this.socket.on('disconnect', () => {
+                        console.log('❌ Disconnected from assistant');
+                        this.isConnected = false;
+                        this.announceToScreenReader('Disconnected from assistant');
+                    });
+                    
+                    this.socket.on('assistant_message', (data) => this.handleAssistantMessage(data));
+                    this.socket.on('speech_recognized', (data) => this.handleSpeechRecognized(data));
+                    this.socket.on('status_update', (data) => this.handleStatusUpdate(data));
+                    this.socket.on('auto_start_listening', () => this.autoStartListening());
+                    this.socket.on('auto_camera_scene', () => this.announceToScreenReader('Analyzing surroundings'));
+                    this.socket.on('auto_camera_emotion', () => this.announceToScreenReader('Checking your expression'));
+                    
+                } catch (error) {
+                    console.error('❌ Socket initialization failed:', error);
+                }
+            }
+            
+            initializeSpeechRecognition() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    this.recognition = new SpeechRecognition();
+                    
+                    this.recognition.continuous = true;
+                    this.recognition.interimResults = false;
+                    this.recognition.lang = 'en-US';
+                    
+                    this.recognition.onstart = () => {
+                        console.log('🎤 Speech recognition started');
+                        this.isListening = true;
+                        this.updateListeningStatus(true);
+                    };
+                    
+                    this.recognition.onresult = (event) => {
+                        const result = event.results[event.results.length - 1];
+                        if (result.isFinal) {
+                            const text = result[0].transcript.trim();
+                            const confidence = result[0].confidence;
+                            
+                            console.log('🗣️ Speech recognized:', text);
+                            
+                            // Send to backend for processing
+                            this.socket.emit('voice_input', {
+                                text: text,
+                                confidence: confidence,
+                                language: 'en'
+                            });
+                        }
+                    };
+                    
+                    this.recognition.onerror = (event) => {
+                        console.error('❌ Speech recognition error:', event.error);
+                        this.announceToScreenReader('Speech recognition error. Please try again.');
+                        
+                        // Auto-restart on error (for continuous operation)
+                        setTimeout(() => {
+                            if (this.autoMode && this.isConnected) {
+                                this.startListening();
+                            }
+                        }, 2000);
+                    };
+                    
+                    this.recognition.onend = () => {
+                        console.log('🎤 Speech recognition ended');
+                        this.isListening = false;
+                        this.updateListeningStatus(false);
+                        
+                        // Auto-restart for continuous operation
+                        if (this.autoMode && this.isConnected) {
+                            setTimeout(() => {
+                                this.startListening();
+                            }, 1000);
+                        }
+                    };
+                    
+                } else {
+                    console.warn('⚠️ Speech recognition not supported');
+                    this.announceToScreenReader('Speech recognition not available in this browser');
+                }
+            }
+            
+            initializeSpeechSynthesis() {
+                if ('speechSynthesis' in window) {
+                    this.synthesis = window.speechSynthesis;
+                } else {
+                    console.warn('⚠️ Speech synthesis not supported');
+                }
+            }
+            
+            startAssistant() {
+                if (!this.isConnected) {
+                    this.announceToScreenReader('Connecting to assistant...');
+                    return;
+                }
+                
+                // Hide start button, show voice interface
+                this.elements.startButton.style.display = 'none';
+                this.elements.voiceIndicator.style.display = 'block';
+                this.elements.conversationArea.classList.add('active');
+                
+                // Auto-start listening
+                this.autoMode = true;
+                this.startListening();
+                
+                this.announceToScreenReader('Voice assistant started. I am listening for your voice.');
+            }
+            
+            autoStartListening() {
+                // Called by server to auto-start
+                setTimeout(() => {
+                    this.startAssistant();
+                }, 1000);
+            }
+            
+            startListening() {
+                if (this.recognition && !this.isListening) {
+                    try {
+                        this.recognition.start();
+                    } catch (error) {
+                        console.error('❌ Failed to start speech recognition:', error);
+                    }
+                }
+            }
+            
+            updateListeningStatus(listening) {
+                if (listening) {
+                    this.elements.statusText.textContent = 'Listening...';
+                    this.elements.instructionText.textContent = 'Speak naturally. I will understand and help automatically.';
+                } else {
+                    this.elements.statusText.textContent = 'Processing...';
+                    this.elements.instructionText.textContent = 'Analyzing your request and preparing response.';
+                }
+            }
+            
+            handleAssistantMessage(data) {
+                console.log('🗣️ Assistant message:', data);
+                
+                // Add to conversation
+                this.addMessageToConversation('assistant', data.text);
+                
+                // Speak the message if auto_speak is true
+                if (data.auto_speak && this.synthesis) {
+                    this.speakText(data.text);
+                }
+                
+                // Announce to screen reader
+                this.announceToScreenReader(`Assistant: ${data.text}`);
+            }
+            
+            handleSpeechRecognized(data) {
+                console.log('👤 User said:', data);
+                this.addMessageToConversation('user', data.text);
+                this.announceToScreenReader(`You said: ${data.text}`);
+            }
+            
+            handleStatusUpdate(data) {
+                console.log('📊 Status update:', data);
+                
+                if (data.voice_activated && !this.autoMode) {
+                    this.autoStartListening();
+                }
+            }
+            
+            speakText(text) {
+                if (this.synthesis) {
+                    // Cancel any ongoing speech
+                    this.synthesis.cancel();
+                    
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1.0;
+                    utterance.volume = 1.0;
+                    
+                    // Use a natural voice if available
+                    const voices = this.synthesis.getVoices();
+                    const preferredVoice = voices.find(voice => 
+                        voice.lang.startsWith('en') && 
+                        (voice.name.includes('Natural') || voice.name.includes('Premium'))
+                    ) || voices.find(voice => voice.lang.startsWith('en'));
+                    
+                    if (preferredVoice) {
+                        utterance.voice = preferredVoice;
+                    }
+                    
+                    this.synthesis.speak(utterance);
+                }
+            }
+            
+            addMessageToConversation(sender, message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                const icon = sender === 'assistant' ? 'fas fa-robot' : 'fas fa-user';
+                const label = sender === 'assistant' ? 'Assistant' : 'You';
+                
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <i class="${icon} me-2" aria-hidden="true"></i>
+                        <strong>${label}</strong>
+                        <span class="timestamp ms-auto">${timestamp}</span>
+                    </div>
+                    <div class="message-content">${this.escapeHtml(message)}</div>
+                `;
+                
+                this.elements.conversationArea.appendChild(messageDiv);
+                
+                // Auto-scroll to bottom
+                this.elements.conversationArea.scrollTop = this.elements.conversationArea.scrollHeight;
+                
+                // Keep only last 20 messages for performance
+                while (this.elements.conversationArea.children.length > 20) {
+                    this.elements.conversationArea.removeChild(this.elements.conversationArea.firstChild);
+                }
+            }
+            
+            announceToScreenReader(message) {
+                this.elements.screenReader.textContent = message;
+                
+                // Clear after delay so it doesn't accumulate
+                setTimeout(() => {
+                    this.elements.screenReader.textContent = '';
+                }, 3000);
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.voiceAssistant = new VoiceFirstAssistant();
+        });
+        
+        // Ensure voices are loaded for speech synthesis
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = () => {
+                console.log('🔊 Speech voices loaded');
+            };
+        }
+    </script>
+</body>
+</html>
