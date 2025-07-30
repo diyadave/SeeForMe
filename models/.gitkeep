@@ -1,0 +1,10 @@
+# This directory contains AI models for the offline smart assistant
+# 
+# Expected models:
+# - yolov8n.pt (object detection)
+# - emotion_model.onnx (emotion recognition)
+# - vosk-model-en-us-0.22/ (English speech recognition)
+# - vosk-model-hi-0.22/ (Hindi speech recognition)
+# - vosk-model-small-gujarati-0.4/ (Gujarati speech recognition)
+#
+# Models will be automatically downloaded or should be placed here manually
