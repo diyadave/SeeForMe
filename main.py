@@ -1,7 +1,7 @@
-from app_voice_first import app, socketio
+from app import app, socketio
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False, log_output=True)
