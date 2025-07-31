@@ -47,6 +47,7 @@ def health():
 def on_connect():
     """Handle client connection"""
     logger.info("🔗 SeeForMe client connected")
+    logger.info(f"🔗 SocketIO events registered: {list(socketio.server.handlers.keys())}")
     
     # Initialize assistant coordinator if not already done
     global assistant_coordinator
@@ -159,7 +160,8 @@ def on_speech_recognized(data):
     language = data.get('language', 'en')
     confidence = data.get('confidence', 1.0)
     
-    logger.info(f"🗣️ BACKEND: Speech received: '{text}' ({language}, {confidence:.2f})")
+    logger.info(f"🗣️ BACKEND RECEIVED: Speech '{text}' ({language}, {confidence:.2f})")
+    print(f"🗣️ BACKEND RECEIVED: Speech '{text}' ({language}, {confidence:.2f})")
     
     if assistant_coordinator:
         logger.info(f"🔄 BACKEND: Sending to coordinator for processing...")
