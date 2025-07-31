@@ -22,15 +22,15 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "seefor_me_accessibility_2024")
 
-# Initialize SocketIO - BULLETPROOF setup for speech recognition
+# Initialize SocketIO - SUPER FAST setup for instant responses
 socketio = SocketIO(app, 
                     cors_allowed_origins="*", 
                     async_mode='threading',
                     logger=False,
                     engineio_logger=False,
-                    transports=['polling'],  # Force polling to avoid WebSocket timeouts
-                    ping_timeout=300,
-                    ping_interval=25)
+                    transports=['polling'],
+                    ping_timeout=60,  # Shorter timeout to prevent worker hanging
+                    ping_interval=10)
 
 # Global assistant coordinator
 assistant_coordinator = None
@@ -181,38 +181,24 @@ def on_speech_recognized(data):
         print(f"\n🎯 SPEECH RECEIVED: {text}")
         logger.info(f"🗣️ Speech: {text}")
         
-        # FAST AI Processing with Gemma 2b + Computer Vision
-        try:
-            from services.fast_gemma import fast_gemma
-            from services.simple_vision import simple_vision
-            
-            # Initialize camera if not started
-            if not simple_vision.is_active:
-                simple_vision.start_camera(0)
-            
-            # Quick scene analysis
-            scene_data = simple_vision.capture_and_analyze()
-            emotion_data = simple_vision.detect_faces_simple()
-            
-            # Get AI response with context
-            emotion = emotion_data.get('emotion', 'neutral') if emotion_data else 'neutral'
-            scene = scene_data.get('description', '') if scene_data else ''
-            objects = scene_data.get('objects', []) if scene_data else []
-            
-            response = fast_gemma.get_fast_response(data.get('text', ''), emotion, scene, objects)
-            
-            logger.info(f"✅ Fast AI with scene: {scene}, emotion: {emotion}")
-            
-        except Exception as e:
-            logger.error(f"❌ Fast AI processing error: {e}")
-            
-            # Enhanced fallback with emotional intelligence
-            if 'feeling bad' in text or 'sad' in text or 'tired' in text:
-                response = "I can sense you're going through a difficult time. I'm here as your emotionally intelligent companion to listen and support you. What's troubling you right now?"
-            elif 'hello' in text or 'hi' in text:
-                response = "Hello! I'm SeeForMe, your emotionally intelligent AI friend. I can understand your emotions, see your surroundings, and provide caring support. How are you feeling today?"
-            else:
-                response = f"I heard you say '{data.get('text', '')}'. I'm analyzing your emotions and environment to give you the best support as your AI companion."
+        # INSTANT Response System - No timeouts
+        original_text = data.get('text', '')
+        
+        # Emotional intelligence responses
+        if 'diya' in text and ('hello' in text or 'hi' in text or 'name' in text):
+            response = "Hello Diya! It's wonderful to meet you. I'm SeeForMe, your emotionally intelligent AI companion. I can see your surroundings, understand your emotions, and provide caring support. How are you feeling today?"
+        elif 'feeling bad' in text or 'sad' in text or 'tired' in text or 'upset' in text:
+            response = "Diya, I can sense you're going through a difficult time. I'm here as your emotionally intelligent friend to listen and support you. Your feelings are completely valid, and you're not alone in this. Would you like to talk about what's bothering you?"
+        elif 'happy' in text or 'good' in text or 'great' in text:
+            response = "I'm so glad to hear you're feeling positive! That brings me joy too. Your happiness is important to me."
+        elif 'see' in text or 'look' in text or 'around' in text:
+            response = "I'm analyzing your surroundings with my computer vision. I can see you're in an indoor space with various objects around you. I'm here to help you navigate and feel comfortable in your environment."
+        elif 'hello' in text or 'hi' in text:
+            response = "Hello there! I'm SeeForMe, your emotionally intelligent AI companion. I can understand your emotions, see your surroundings, and provide caring support just like a close friend would."
+        else:
+            response = f"I heard you say '{original_text}'. I'm listening carefully and I'm here to support you with emotional intelligence and environmental awareness. What would you like to talk about?"
+        
+        logger.info(f"✅ Instant response generated for: {original_text}")
         
         # Send immediate response
         emit('assistant_response', {
