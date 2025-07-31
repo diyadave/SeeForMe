@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Voice Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        
+        .status {
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .listening {
+            background: rgba(0, 255, 0, 0.3) !important;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 10px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #transcript {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            min-height: 100px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        #response {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            min-height: 60px;
+            border: 2px solid rgba(76, 175, 80, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Simple Voice Assistant</h1>
+        <div id="status" class="status">Connecting...</div>
+        
+        <button id="startBtn" onclick="startListening()">Start Listening</button>
+        <button id="stopBtn" onclick="stopListening()" disabled>Stop Listening</button>
+        <button onclick="testSpeech()">🧪 Test</button>
+        
+        <div id="transcript">
+            <strong>What you said:</strong><br>
+            <span id="transcriptText">Waiting for speech...</span>
+        </div>
+        
+        <div id="response">
+            <strong>Assistant response:</strong><br>
+            <span id="responseText">Ready to help you!</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        class SimpleVoiceAssistant {
+            constructor() {
+                this.socket = io();
+                this.recognition = null;
+                this.isListening = false;
+                
+                this.initializeSocketIO();
+                this.initializeSpeechRecognition();
+                this.initializeSpeechSynthesis();
+            }
+            
+            initializeSocketIO() {
+                this.socket.on('connect', () => {
+                    console.log('✅ Connected to server');
+                    document.getElementById('status').textContent = 'Connected - Ready to listen';
+                });
+                
+                this.socket.on('connected', (data) => {
+                    console.log('✅ Server confirmed:', data.message);
+                });
+                
+                this.socket.on('assistant_response', (data) => {
+                    console.log('🤖 Assistant response:', data.text);
+                    document.getElementById('responseText').textContent = data.text;
+                    
+                    if (data.speak) {
+                        this.speak(data.text);
+                    }
+                });
+                
+                this.socket.on('disconnect', () => {
+                    console.log('❌ Disconnected from server');
+                    document.getElementById('status').textContent = 'Disconnected';
+                });
+            }
+            
+            initializeSpeechRecognition() {
+                if ('webkitSpeechRecognition' in window) {
+                    this.recognition = new webkitSpeechRecognition();
+                    this.recognition.continuous = true;
+                    this.recognition.interimResults = false;
+                    this.recognition.lang = 'en-US';
+                    
+                    this.recognition.onstart = () => {
+                        console.log('🎤 Speech recognition started');
+                        this.isListening = true;
+                        document.getElementById('status').textContent = 'Listening...';
+                        document.getElementById('status').classList.add('listening');
+                        document.getElementById('startBtn').disabled = true;
+                        document.getElementById('stopBtn').disabled = false;
+                    };
+                    
+                    this.recognition.onresult = (event) => {
+                        const lastResult = event.results[event.results.length - 1];
+                        if (lastResult.isFinal) {
+                            const text = lastResult[0].transcript;
+                            console.log('🗣️ Speech recognized:', text);
+                            document.getElementById('transcriptText').textContent = text;
+                            
+                            // Send to backend
+                            this.socket.emit('speech_recognized', {
+                                text: text,
+                                confidence: lastResult[0].confidence,
+                                language: 'en'
+                            });
+                        }
+                    };
+                    
+                    this.recognition.onend = () => {
+                        console.log('🎤 Speech recognition ended');
+                        this.isListening = false;
+                        document.getElementById('status').textContent = 'Ready to listen';
+                        document.getElementById('status').classList.remove('listening');
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('stopBtn').disabled = true;
+                        
+                        // Auto-restart if we were listening
+                        setTimeout(() => {
+                            if (!this.isListening) {
+                                this.startListening();
+                            }
+                        }, 1000);
+                    };
+                    
+                    this.recognition.onerror = (event) => {
+                        console.error('❌ Speech recognition error:', event.error);
+                        if (event.error !== 'no-speech') {
+                            document.getElementById('status').textContent = `Error: ${event.error}`;
+                        }
+                    };
+                } else {
+                    console.error('❌ Speech recognition not supported');
+                    document.getElementById('status').textContent = 'Speech recognition not supported';
+                }
+            }
+            
+            initializeSpeechSynthesis() {
+                if ('speechSynthesis' in window) {
+                    console.log('✅ Speech synthesis available');
+                } else {
+                    console.error('❌ Speech synthesis not supported');
+                }
+            }
+            
+            startListening() {
+                if (this.recognition && !this.isListening) {
+                    this.recognition.start();
+                }
+            }
+            
+            stopListening() {
+                if (this.recognition && this.isListening) {
+                    this.recognition.stop();
+                }
+            }
+            
+            speak(text) {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1.0;
+                    utterance.volume = 1.0;
+                    speechSynthesis.speak(utterance);
+                    console.log('🔊 Speaking:', text);
+                }
+            }
+            
+            testSpeech() {
+                console.log('🧪 Sending test speech');
+                document.getElementById('transcriptText').textContent = 'Test message';
+                this.socket.emit('speech_recognized', {
+                    text: 'hello this is a test message',
+                    confidence: 1.0,
+                    language: 'en'
+                });
+            }
+        }
+        
+        // Global functions for buttons
+        let assistant;
+        
+        function startListening() {
+            assistant.startListening();
+        }
+        
+        function stopListening() {
+            assistant.stopListening();
+        }
+        
+        function testSpeech() {
+            assistant.testSpeech();
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            assistant = new SimpleVoiceAssistant();
+        });
+    </script>
+</body>
+</html>

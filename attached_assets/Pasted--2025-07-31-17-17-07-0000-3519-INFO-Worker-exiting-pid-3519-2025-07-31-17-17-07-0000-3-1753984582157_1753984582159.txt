@@ -1,0 +1,145 @@
+[2025-07-31 17:17:07 +0000] [3519] [INFO] Worker exiting (pid: 3519)
+[2025-07-31 17:17:07 +0000] [3327] [INFO] Shutting down: Master
+[2025-07-31 17:15:24 +0000] [3327] [INFO] Starting gunicorn 23.0.0
+[2025-07-31 17:15:24 +0000] [3327] [INFO] Listening at: http://0.0.0.0:5000 (3327)
+[2025-07-31 17:15:24 +0000] [3327] [INFO] Using worker: sync
+[2025-07-31 17:15:24 +0000] [3338] [INFO] Booting worker with pid: 3338
+[2025-07-31 17:15:26 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:26 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:26 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:26 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:26 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:26 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:26 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:27 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:27 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:27 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:27 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:27 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:27 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:28 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:29 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:29 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:29 +0000] [3327] [INFO] Handling signal: winch
+[2025-07-31 17:15:29 +0000] [3327] [INFO] Handling signal: winch
+2025-07-31 17:15:35,347 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+[2025-07-31 17:16:30 +0000] [3327] [CRITICAL] WORKER TIMEOUT (pid:3338)
+[2025-07-31 17:16:30 +0000] [3338] [ERROR] Error handling request /socket.io/?EIO=4&transport=websocket&sid=l-Z8eCL5qmXdzluiAAAA
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_socketio/__init__.py", line 42, in __call__
+    return super().__call__(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/middleware.py", line 63, in __call__
+    return self.engineio_app.handle_request(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/socketio/server.py", line 434, in handle_request
+    return self.eio.handle_request(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/server.py", line 286, in handle_request
+    packets = socket.handle_get_request(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 92, in handle_get_request
+    return getattr(self, '_upgrade_' + transport)(environ,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 151, in _upgrade_websocket
+    return ws(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/async_drivers/_websocket_wsgi.py", line 15, in __call__
+    ret = self.app(self)
+          ^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 183, in _websocket_handler
+    pkt = websocket_wait()
+          ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 156, in websocket_wait
+    data = ws.wait()
+           ^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/async_drivers/_websocket_wsgi.py", line 32, in wait
+    return self.ws.receive()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/simple_websocket/ws.py", line 96, in receive
+    if not self.event.wait(timeout=timeout):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/threading.py", line 629, in wait
+    signaled = self._cond.wait(timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/threading.py", line 327, in wait
+    waiter.acquire()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-07-31 17:16:30 +0000] [3338] [INFO] Worker exiting (pid: 3338)
+[2025-07-31 17:16:30 +0000] [3519] [INFO] Booting worker with pid: 3519
+Invalid session l-Z8eCL5qmXdzluiAAAA (further occurrences of this error will be logged with level INFO)
+2025-07-31 17:16:31,041 - engineio.server - ERROR - Invalid session l-Z8eCL5qmXdzluiAAAA (further occurrences of this error will be logged with level INFO)
+2025-07-31 17:16:32,226 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+^C[2025-07-31 17:17:07 +0000] [3327] [INFO] Handling signal: int
+[2025-07-31 17:17:07 +0000] [3519] [ERROR] Error handling request /socket.io/?EIO=4&transport=websocket&sid=92Y9a_MZzim_1VqEAAAA
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_socketio/__init__.py", line 42, in __call__
+    return super().__call__(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/middleware.py", line 63, in __call__
+    return self.engineio_app.handle_request(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/socketio/server.py", line 434, in handle_request
+    return self.eio.handle_request(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/server.py", line 286, in handle_request
+    packets = socket.handle_get_request(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 92, in handle_get_request
+    return getattr(self, '_upgrade_' + transport)(environ,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 151, in _upgrade_websocket
+    return ws(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/async_drivers/_websocket_wsgi.py", line 15, in __call__
+    ret = self.app(self)
+          ^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 183, in _websocket_handler
+    pkt = websocket_wait()
+          ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/socket.py", line 156, in websocket_wait
+    data = ws.wait()
+           ^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/engineio/async_drivers/_websocket_wsgi.py", line 32, in wait
+    return self.ws.receive()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/simple_websocket/ws.py", line 96, in receive
+    if not self.event.wait(timeout=timeout):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/threading.py", line 629, in wait
+    signaled = self._cond.wait(timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/threading.py", line 327, in wait
+    waiter.acquire()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 198, in handle_quit
+    time.sleep(0.1)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 199, in handle_quit
+    sys.exit(0)
+SystemExit: 0

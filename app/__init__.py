@@ -22,9 +22,14 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "seefor_me_accessibility_2024")
 
-# Initialize SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading',
-                    engineio_logger=False, socketio_logger=False)
+# Initialize SocketIO with simpler, more reliable configuration
+socketio = SocketIO(app, 
+                    cors_allowed_origins="*", 
+                    async_mode='threading',
+                    logger=False,
+                    engineio_logger=False,
+                    ping_timeout=120,
+                    ping_interval=30)
 
 # Global assistant coordinator
 assistant_coordinator = None
@@ -169,12 +174,25 @@ def on_get_status():
 
 @socketio.on('speech_recognized') 
 def on_speech_recognized(data):
-    """Handle speech recognition results"""
-    print("\n" + "🔥" * 80)
-    print("🔥🔥🔥 SPEECH EVENT RECEIVED IN BACKEND! 🔥🔥🔥")
-    print(f"🔥 Raw Data: {data}")
-    print("🔥" * 80 + "\n")
-    logger.info("🔥🔥🔥 SPEECH EVENT RECEIVED IN BACKEND!")
+    """Handle speech recognition results - CRITICAL HANDLER"""
+    try:
+        print(f"\n{'='*60}")
+        print("🎯 SPEECH EVENT RECEIVED IN BACKEND!")
+        print(f"📝 Data: {data}")
+        print(f"{'='*60}\n")
+        
+        # Immediately respond to show it's working
+        emit('assistant_response', {
+            'text': f"I heard you! You said: {data.get('text', 'something')}",
+            'emotion': 'friendly',
+            'speak': True
+        })
+        
+        logger.info(f"✅ Speech processed: {data.get('text', '')}")
+        
+    except Exception as e:
+        print(f"❌ Error in speech handler: {e}")
+        emit('system_error', {'message': f'Speech processing error: {e}'})
     
     text = data.get('text', '')
     language = data.get('language', 'en')
