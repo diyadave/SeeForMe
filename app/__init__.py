@@ -29,8 +29,8 @@ socketio = SocketIO(app,
                     logger=False,
                     engineio_logger=False,
                     transports=['polling'],
-                    ping_timeout=60,  # Shorter timeout to prevent worker hanging
-                    ping_interval=10)
+                    ping_timeout=10,  # Much shorter timeout
+                    ping_interval=5)
 
 # Global assistant coordinator
 assistant_coordinator = None
@@ -163,42 +163,42 @@ def on_get_status():
 @socketio.on('speech_recognized') 
 def on_speech_recognized(data):
     """Handle speech recognition results - ULTRA FAST VERSION"""
-    try:
-        user_text = data.get('text', '')
-        print(f"\n🎯 SPEECH: {user_text}")
-        
-        # Immediate name extraction and response
-        if "my name is" in user_text.lower():
-            import re
-            match = re.search(r"my name is (\w+)", user_text.lower())
-            if match:
-                name = match.group(1).capitalize()
-                response = f"Hello {name}! Nice to meet you! I'm so glad you're here with me today."
-            else:
-                response = "Hello! Nice to meet you! I'm your caring AI companion."
-        elif "sad" in user_text.lower():
-            response = "I'm sorry you're feeling sad. I'm here to listen and support you. You're not alone."
-        elif "happy" in user_text.lower():
-            response = "That's wonderful! I'm so glad you're feeling happy today. I'd love to hear more about it!"
+    # Ultra-fast processing - no try/except to avoid delays
+    user_text = data.get('text', '')
+    print(f"🎯 SPEECH: {user_text}")
+    
+    # Generate response instantly
+    text_lower = user_text.lower()
+    
+    if "my name is" in text_lower:
+        import re
+        match = re.search(r"my name is (\w+)", text_lower)
+        if match:
+            name = match.group(1).capitalize()
+            response = f"Hello {name}! Nice to meet you! I'm so glad you're here."
         else:
-            response = f"I heard you say '{user_text}'. I'm your caring AI companion, here to support you emotionally."
-        
-        # Send response immediately
-        emit('assistant_response', {
-            'text': response,
-            'emotion': 'caring',
-            'speak': True
-        })
-        
-        print(f"✅ SENT: {response}")
-            
-    except Exception as e:
-        print(f"❌ ERROR: {e}")
-        emit('assistant_response', {
-            'text': "I heard you! I'm your AI companion, here to support you.",
-            'emotion': 'caring',
-            'speak': True
-        })
+            response = "Hello! Nice to meet you! I'm your caring AI companion."
+    
+    elif "bad" in text_lower or "sad" in text_lower:
+        response = "I'm sorry you're having a tough time. I'm here to listen and support you. You're not alone."
+    
+    elif "scold" in text_lower or "someone" in text_lower:
+        response = "I understand someone was harsh with you. That must have been difficult. Remember, other people's words don't define your worth. You're valuable and deserving of kindness."
+    
+    elif "happy" in text_lower or "good" in text_lower:
+        response = "That's wonderful! I'm so glad you're feeling good today."
+    
+    else:
+        response = f"I heard you. I'm your caring AI companion, here to support you emotionally."
+    
+    # Send response immediately
+    emit('assistant_response', {
+        'text': response,
+        'emotion': 'caring',
+        'speak': True
+    })
+    
+    print(f"✅ SENT: {response}")
 
 if __name__ == '__main__':
     logger.info("🚀 Starting SeeForMe Assistant")
