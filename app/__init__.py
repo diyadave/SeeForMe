@@ -181,24 +181,34 @@ def on_speech_recognized(data):
         print(f"\n🎯 SPEECH RECEIVED: {text}")
         logger.info(f"🗣️ Speech: {text}")
         
-        # INSTANT Response System - No timeouts
-        original_text = data.get('text', '')
+        # Fast threaded processing to avoid worker timeouts
+        def process_with_ai():
+            """Process in background thread to prevent worker timeout"""
+            global assistant_coordinator
+            try:
+                if assistant_coordinator:
+                    logger.info(f"🤖 Processing with assistant coordinator...")  
+                    assistant_coordinator.on_speech_recognized(data.get('text', ''), 'en', data.get('confidence', 0.8))
+                else:
+                    # Initialize coordinator if not available
+                    logger.info(f"🔄 Initializing assistant coordinator...")
+                    from app.assistant_coordinator import AssistantCoordinator
+                    assistant_coordinator = AssistantCoordinator()
+                    assistant_coordinator.initialize()
+                    assistant_coordinator.on_speech_recognized(data.get('text', ''), 'en', data.get('confidence', 0.8))
+            except Exception as e:
+                logger.error(f"❌ AI processing error: {e}")
+                # Fallback response
+                emit('assistant_response', {
+                    'text': f"I heard you say '{data.get('text', '')}'. I'm your emotionally intelligent AI companion, here to listen and support you.",
+                    'emotion': 'caring',
+                    'speak': True
+                })
         
-        # Emotional intelligence responses
-        if 'diya' in text and ('hello' in text or 'hi' in text or 'name' in text):
-            response = "Hello Diya! It's wonderful to meet you. I'm SeeForMe, your emotionally intelligent AI companion. I can see your surroundings, understand your emotions, and provide caring support. How are you feeling today?"
-        elif 'feeling bad' in text or 'sad' in text or 'tired' in text or 'upset' in text:
-            response = "Diya, I can sense you're going through a difficult time. I'm here as your emotionally intelligent friend to listen and support you. Your feelings are completely valid, and you're not alone in this. Would you like to talk about what's bothering you?"
-        elif 'happy' in text or 'good' in text or 'great' in text:
-            response = "I'm so glad to hear you're feeling positive! That brings me joy too. Your happiness is important to me."
-        elif 'see' in text or 'look' in text or 'around' in text:
-            response = "I'm analyzing your surroundings with my computer vision. I can see you're in an indoor space with various objects around you. I'm here to help you navigate and feel comfortable in your environment."
-        elif 'hello' in text or 'hi' in text:
-            response = "Hello there! I'm SeeForMe, your emotionally intelligent AI companion. I can understand your emotions, see your surroundings, and provide caring support just like a close friend would."
-        else:
-            response = f"I heard you say '{original_text}'. I'm listening carefully and I'm here to support you with emotional intelligence and environmental awareness. What would you like to talk about?"
-        
-        logger.info(f"✅ Instant response generated for: {original_text}")
+        # Start processing in background thread
+        import threading
+        threading.Thread(target=process_with_ai, daemon=True).start()
+        return  # Don't block the main thread
         
         # Send immediate response
         emit('assistant_response', {

@@ -24,9 +24,13 @@ class FastGemmaConnect:
         try:
             response = self.session.get(f"{self.base_url}/api/tags", timeout=3)
             if response.status_code == 200:
-                self.is_connected = True
-                logger.info("✅ Fast Gemma connected")
-                return True
+                models = response.json().get('models', [])
+                if any('gemma2:2b' in str(model) for model in models):
+                    self.is_connected = True
+                    logger.info("✅ Fast Gemma connected with gemma2:2b")
+                    return True
+                else:
+                    logger.warning("⚠️ gemma2:2b model not found")
         except Exception as e:
             logger.warning(f"⚠️ Gemma not available: {e}")
             self.is_connected = False
