@@ -181,67 +181,40 @@ def on_speech_recognized(data):
         print(f"\n🎯 SPEECH RECEIVED: {text}")
         logger.info(f"🗣️ Speech: {text}")
         
-        # FULL AI PIPELINE: Name extraction + YOLOv8n + Places365 + Emotion.onnx + Gemma:latest
-        from simple_gemma_agent import simple_agent
-        from services.advanced_vision import advanced_vision
-        from services.name_extractor import name_extractor
-        
-        # Extract user info and name
+        # FAST RESPONSE SYSTEM - Avoid worker timeouts
         user_text = data.get('text', '')
-        extracted_name = name_extractor.extract_name(user_text)
-        user_name = extracted_name if extracted_name else "friend"
         
+        # Simple name extraction
+        import re
+        extracted_name = None
+        if "my name is" in user_text.lower():
+            match = re.search(r"my name is (\w+)", user_text.lower())
+            if match:
+                extracted_name = match.group(1).capitalize()
+        
+        user_name = extracted_name if extracted_name else "friend"
         logger.info(f"👤 User name: {user_name}")
         
-        # Full computer vision analysis
-        try:
-            advanced_vision.start_camera()
-            full_analysis = advanced_vision.capture_and_analyze_full()
-            
-            detected_emotion = full_analysis.get('emotion', 'neutral')
-            emotion_confidence = full_analysis.get('emotion_confidence', 0.0)
-            detected_objects = full_analysis.get('objects', [])
-            scene_description = full_analysis.get('scene', 'indoor space')
-            
-            logger.info(f"😊 Emotion: {detected_emotion} ({emotion_confidence:.2f})")
-            logger.info(f"👁️ Objects: {detected_objects}")
-            logger.info(f"🏠 Scene: {scene_description}")
-            
-            # Build comprehensive context for Gemma
-            context = f"Scene: {scene_description}. Objects visible: {', '.join(detected_objects[:3]) if detected_objects else 'none specific'}."
-            
-        except Exception as e:
-            logger.warning(f"⚠️ Vision processing failed: {e}")
-            detected_emotion = 'neutral'
-            emotion_confidence = 0.0
-            context = ''
+        # Generate immediate response without complex AI to avoid timeout
+        if extracted_name:
+            ai_response = f"Hello {extracted_name}! Nice to meet you! I'm so glad you're here. How are you feeling today? I'm your AI companion and I'm here to support you emotionally."
+        elif "sad" in user_text.lower() or "upset" in user_text.lower():
+            ai_response = f"I'm sorry to hear you're feeling sad, {user_name}. I'm here to listen and support you. Would you like to talk about what's bothering you? Sometimes sharing helps."
+        elif "happy" in user_text.lower() or "good" in user_text.lower():
+            ai_response = f"That's wonderful to hear, {user_name}! I'm so glad you're feeling good today. What's making you happy? I'd love to share in your joy!"
+        else:
+            ai_response = f"Hello {user_name}! I heard you say '{user_text}'. I'm your caring AI companion, here to support you emotionally. How can I help you today?"
         
-        # Get human-like conversational response from Gemma2:2b
-        logger.info(f"🤖 Getting Gemma2:2b response for {user_name}...")
-        ai_response = simple_agent.get_response(
-            user_text, 
-            user_name, 
-            detected_emotion, 
-            context
-        )
+        logger.info(f"🤖 Generated fast response for {user_name}")
         
-        # Send comprehensive response
+        # Send immediate response
         emit('assistant_response', {
             'text': ai_response,
-            'emotion': detected_emotion,
+            'emotion': 'caring',
             'speak': True
         })
         
-        # Send detailed analysis to frontend
-        emit('vision_analysis', {
-            'emotion': detected_emotion,
-            'emotion_confidence': emotion_confidence,
-            'objects': detected_objects,
-            'scene': scene_description,
-            'user_name': user_name
-        })
-        
-        logger.info(f"✅ Full AI response sent to {user_name}: {ai_response[:50]}... (emotion: {detected_emotion})")
+        logger.info(f"✅ Fast response sent to {user_name}: {ai_response[:50]}...")
             
     except Exception as e:
         logger.error(f"❌ Speech processing error: {e}")

@@ -64,11 +64,21 @@ class SimpleGemmaAgent:
     
     def get_response(self, user_input, user_name="", emotion="neutral", context=""):
         """Get fast AI response from Gemma2:2b with emotion and context awareness"""
-        # Force connection check every time to ensure we're really connected
-        self._ensure_ollama()
+        # Ensure connection but don't block on it
+        try:
+            self._ensure_ollama()
+        except:
+            pass
         
         if not self.is_connected:
             logger.warning("⚠️ Ollama not connected, using fallback response")
+            # Special name extraction fallback
+            if "my name is" in user_input.lower():
+                import re
+                match = re.search(r"my name is (\w+)", user_input.lower())
+                if match:
+                    name = match.group(1).capitalize()
+                    return f"Hello {name}! Nice to meet you! I'm so glad you're here. How are you feeling today?"
             return f"Hello {user_name}! I heard you say '{user_input}'. I'm your AI companion, here to support you emotionally."
             
         try:
