@@ -121,7 +121,8 @@ def on_voice_input(data):
     logger.info(f"🗣️ Voice input: '{text}' (confidence: {confidence:.2f})")
     
     if assistant_coordinator and text.strip():
-        # Process voice input through coordinator
+        # Process voice input through coordinator - THIS SHOULD TRIGGER TTS
+        logger.info(f"🔄 Processing voice input through coordinator...")
         assistant_coordinator.process_voice_input(text, language, confidence)
     else:
         emit('assistant_response', {
@@ -158,11 +159,13 @@ def on_speech_recognized(data):
     language = data.get('language', 'en')
     confidence = data.get('confidence', 1.0)
     
-    logger.info(f"🗣️ Speech received: '{text}' ({language}, {confidence:.2f})")
+    logger.info(f"🗣️ BACKEND: Speech received: '{text}' ({language}, {confidence:.2f})")
     
     if assistant_coordinator:
+        logger.info(f"🔄 BACKEND: Sending to coordinator for processing...")
         assistant_coordinator.on_speech_recognized(text, language, confidence)
     else:
+        logger.error("❌ BACKEND: Assistant coordinator not available!")
         # Fallback response if coordinator not available
         emit('assistant_response', {
             'text': f"Hello! I heard you say '{text}'. I'm SeeForMe, your AI assistant, but I'm still initializing. Please try again in a moment.",

@@ -167,7 +167,7 @@ class AssistantCoordinator:
     
     def on_speech_recognized(self, text: str, language: str = 'en', confidence: float = 1.0):
         """Callback for speech recognition"""
-        logger.info(f"🧠 Processing speech: '{text}'")
+        logger.info(f"🧠 Processing speech: '{text}' (language: {language}, confidence: {confidence:.2f})")
         
         # Process voice input immediately
         self._handle_voice_input({
@@ -371,6 +371,8 @@ class AssistantCoordinator:
     
     def _generate_text_response(self, text: str, language: str, intent: str):
         """Generate text-only response"""
+        logger.info(f"📝 Generating text response for: '{text}' (intent: {intent}, language: {language})")
+        
         context = {
             'user_input': text,
             'language': language,
@@ -380,6 +382,7 @@ class AssistantCoordinator:
         
         # Always use fallback for immediate response - no dependency on complex AI models
         response = self._fallback_text_response(text, intent)
+        logger.info(f"💬 Generated response: '{response}'")
         
         # Emit response
         self.socketio.emit('assistant_response', {
@@ -390,7 +393,10 @@ class AssistantCoordinator:
         
         # Speak response
         if self.tts_handler:
+            logger.info(f"🔊 Speaking text response: '{response[:50]}...' in {language}")
             self.tts_handler.speak(response, language)
+        else:
+            logger.error("❌ TTS handler not available for text response!")
         
         # Update conversation history
         self.user_context['conversation_history'].append({

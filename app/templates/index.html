@@ -946,11 +946,43 @@
                     console.log('▶️ Assistant resumed');
                 }
             }
+            
+            // Test function to manually trigger speech event
+            testSpeechEvent() {
+                console.log('🧪 Sending test speech event...');
+                this.socket.emit('speech_recognized', {
+                    text: 'hello this is a test message',
+                    confidence: 1.0,
+                    language: 'en'
+                });
+            }
         }
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
             window.seeForMe = new SeeForMeAssistant();
+            
+            // Add test button for debugging (remove in production)
+            setTimeout(() => {
+                const testBtn = document.createElement('button');
+                testBtn.innerHTML = '🧪 Test Speech';
+                testBtn.style.position = 'fixed';
+                testBtn.style.top = '10px';
+                testBtn.style.right = '10px';
+                testBtn.style.zIndex = '9999';
+                testBtn.style.backgroundColor = '#8b5cf6';
+                testBtn.style.color = 'white';
+                testBtn.style.border = 'none';
+                testBtn.style.borderRadius = '8px';
+                testBtn.style.padding = '8px 16px';
+                testBtn.style.cursor = 'pointer';
+                testBtn.onclick = () => {
+                    if (window.seeForMe) {
+                        window.seeForMe.testSpeechEvent();
+                    }
+                };
+                document.body.appendChild(testBtn);
+            }, 2000);
         });
         
         // Ensure voices are loaded
