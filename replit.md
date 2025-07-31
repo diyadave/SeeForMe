@@ -5,8 +5,8 @@
 SeeForMe is a fully offline smart assistant application designed specifically for visually impaired users. The application combines voice interaction, emotion detection, scene analysis, and natural conversation to provide emotional support and environmental awareness. Built with Python Flask and real-time communication via SocketIO.
 
 **Current Status (Jan 31, 2025):**
-- ✅ **Working**: Vosk speech recognition, Hybrid AI responses (Gemma2:2b + intelligent patterns), Name extraction, Basic emotion detection, TTS output, Web interface
-- 🔄 **In Progress**: Mobile Kivy wrapper, Gemma3n:latest model integration, Camera integration
+- ✅ **Working**: Vosk speech recognition, Hybrid AI responses (Gemma3n nano + intelligent patterns), Name extraction, Basic emotion detection, TTS output, Web interface
+- 🔄 **In Progress**: Mobile Kivy wrapper, Camera integration for emotion/scene detection
 - ⏳ **Planned**: YOLOv8n computer vision, Advanced emotion detection ONNX models, Scene analysis, APK/iOS deployment
 
 **Recent Success**: Core conversational features working perfectly! User tested with "hello my name is Diya", "I am feeling sad", and "someone scold me today" - all responded intelligently with proper name recognition and emotional support.

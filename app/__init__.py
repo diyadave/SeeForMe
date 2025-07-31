@@ -157,19 +157,19 @@ def on_voice_input(data):
         gemma_response = requests.post(
             "http://localhost:11434/api/generate",
             json={
-                "model": "gemma2:2b",
+                "model": "gemma3n",
                 "prompt": f"You are a caring AI companion for blind users. A user named {user_name} just said: \"{user_text}\". Respond with empathy and support in 2-3 sentences.",
                 "stream": False
             },
-            timeout=3
+            timeout=5
         )
         if gemma_response.status_code == 200:
             gemma_data = gemma_response.json()
             if gemma_data.get('response'):
                 response = gemma_data['response'].strip()
-                print(f"🤖 GEMMA2:2B SUCCESS: {response[:50]}...")
+                print(f"🤖 GEMMA3N NANO SUCCESS: {response[:50]}...")
     except Exception as e:
-        print(f"⚠️ Gemma2:2b not available: {e}")
+        print(f"⚠️ Gemma3n nano not available: {e}")
     
     # Enhanced pattern matching fallback (if Gemma fails)
     if not response:
