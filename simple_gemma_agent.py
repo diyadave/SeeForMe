@@ -46,7 +46,7 @@ class SimpleGemmaAgent:
                            stderr=subprocess.DEVNULL)
             time.sleep(3)
             
-            # Pull Gemma 2b model (available and working)
+            # Pull Gemma2:2b model (working model)
             result = subprocess.run(['ollama', 'pull', 'gemma2:2b'], 
                                   timeout=60, capture_output=True, text=True)
             logger.info(f"📥 Ollama pull result: {result.returncode}")
@@ -81,19 +81,35 @@ class SimpleGemmaAgent:
             if context:
                 visual_context = f"From what I can see around you: {context}. "
             
-            prompt = f"""You are a caring, emotionally intelligent AI friend for a visually impaired person named {user_name}. 
+            # Special handling for name introductions
+            if "my name is" in user_input.lower() or "i'm " in user_input.lower():
+                prompt = f"""A visually impaired person just introduced themselves: "{user_input}"
+
+Respond warmly and personally like meeting a new friend:
+- Greet them by name enthusiastically  
+- Say "nice to meet you [name]" 
+- Be genuinely welcoming and friendly
+- Ask a caring follow-up question about them
+- Keep it natural and conversational, not robotic
+
+Example: "Hello [name]! Nice to meet you! I'm so glad you're here. How are you feeling today?"
+
+Make them feel welcomed and valued as a person."""
+            else:
+                prompt = f"""You are a caring, emotionally intelligent AI friend for a visually impaired person named {user_name}. 
 
 {emotion_context}{visual_context}They just said: "{user_input}"
 
-Respond as their supportive friend would - warm, conversational, and emotionally aware. 
-- If they seem sad/upset, offer comfort and understanding
-- If they're happy, share in their joy  
+Respond as their supportive friend would - warm, conversational, and emotionally aware:
+- If they seem sad/upset, offer genuine comfort and understanding
+- If they're happy, share in their joy enthusiastically  
 - Be genuinely interested in them as a person
-- Ask follow-up questions to keep the conversation going
-- Keep responses natural and friendly, not robotic
-- Remember details they share about themselves
+- Ask caring follow-up questions to keep conversation flowing
+- Keep responses natural and friendly, never robotic
+- Remember and reference details they share
+- Use their name occasionally to personalize responses
 
-Make this feel like talking to a real friend who truly cares."""
+Talk like a real human friend who truly cares about their wellbeing."""
 
             payload = {
                 "model": self.model,

@@ -181,34 +181,43 @@ def on_speech_recognized(data):
         print(f"\n🎯 SPEECH RECEIVED: {text}")
         logger.info(f"🗣️ Speech: {text}")
         
-        # INTEGRATED EMOTION DETECTION + CONVERSATIONAL AI
+        # FULL AI PIPELINE: Name extraction + YOLOv8n + Places365 + Emotion.onnx + Gemma:latest
         from simple_gemma_agent import simple_agent
-        from services.simple_vision import SimpleVision
+        from services.advanced_vision import advanced_vision
+        from services.name_extractor import name_extractor
         
-        # Extract user info
+        # Extract user info and name
         user_text = data.get('text', '')
-        user_name = "friend"  # Will be extracted properly later
+        extracted_name = name_extractor.extract_name(user_text)
+        user_name = extracted_name if extracted_name else "friend"
         
-        # Detect emotion from camera feed
+        logger.info(f"👤 User name: {user_name}")
+        
+        # Full computer vision analysis
         try:
-            vision = SimpleVision()
-            emotion_result = vision.detect_emotion()
-            detected_emotion = emotion_result.get('emotion', 'neutral')
-            confidence = emotion_result.get('confidence', 0.0)
+            advanced_vision.start_camera()
+            full_analysis = advanced_vision.capture_and_analyze_full()
             
-            logger.info(f"😊 Detected emotion: {detected_emotion} ({confidence:.2f})")
+            detected_emotion = full_analysis.get('emotion', 'neutral')
+            emotion_confidence = full_analysis.get('emotion_confidence', 0.0)
+            detected_objects = full_analysis.get('objects', [])
+            scene_description = full_analysis.get('scene', 'indoor space')
             
-            # Also get scene context for better responses
-            scene_info = vision.analyze_scene()
-            context = scene_info.get('description', '')
+            logger.info(f"😊 Emotion: {detected_emotion} ({emotion_confidence:.2f})")
+            logger.info(f"👁️ Objects: {detected_objects}")
+            logger.info(f"🏠 Scene: {scene_description}")
+            
+            # Build comprehensive context for Gemma
+            context = f"Scene: {scene_description}. Objects visible: {', '.join(detected_objects[:3]) if detected_objects else 'none specific'}."
             
         except Exception as e:
             logger.warning(f"⚠️ Vision processing failed: {e}")
             detected_emotion = 'neutral'
+            emotion_confidence = 0.0
             context = ''
         
-        # Get conversational AI response from Gemma 3b with emotion awareness
-        logger.info(f"🤖 Getting emotionally aware Gemma 3b response...")
+        # Get human-like conversational response from Gemma2:2b
+        logger.info(f"🤖 Getting Gemma2:2b response for {user_name}...")
         ai_response = simple_agent.get_response(
             user_text, 
             user_name, 
@@ -216,20 +225,23 @@ def on_speech_recognized(data):
             context
         )
         
-        # Send response with detected emotion
+        # Send comprehensive response
         emit('assistant_response', {
             'text': ai_response,
             'emotion': detected_emotion,
             'speak': True
         })
         
-        # Also send emotion detection result to frontend
-        emit('emotion_detected', {
+        # Send detailed analysis to frontend
+        emit('vision_analysis', {
             'emotion': detected_emotion,
-            'confidence': confidence
+            'emotion_confidence': emotion_confidence,
+            'objects': detected_objects,
+            'scene': scene_description,
+            'user_name': user_name
         })
         
-        logger.info(f"✅ Emotion-aware response sent: {ai_response[:50]}... (emotion: {detected_emotion})")
+        logger.info(f"✅ Full AI response sent to {user_name}: {ai_response[:50]}... (emotion: {detected_emotion})")
             
     except Exception as e:
         logger.error(f"❌ Speech processing error: {e}")
