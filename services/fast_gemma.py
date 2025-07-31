@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class FastGemmaConnect:
     def __init__(self):
         self.base_url = "http://localhost:11434"
-        self.model = "gemma2:2b"
+        self.model = "gemma:3b"
         self.is_connected = False
         self.session = requests.Session()
         self.session.timeout = 5  # Fast timeout for speed
@@ -25,12 +25,12 @@ class FastGemmaConnect:
             response = self.session.get(f"{self.base_url}/api/tags", timeout=3)
             if response.status_code == 200:
                 models = response.json().get('models', [])
-                if any('gemma2:2b' in str(model) for model in models):
+                if any('gemma:3b' in str(model) for model in models):
                     self.is_connected = True
-                    logger.info("✅ Fast Gemma connected with gemma2:2b")
+                    logger.info("✅ Fast Gemma connected with gemma:3b")
                     return True
                 else:
-                    logger.warning("⚠️ gemma2:2b model not found")
+                    logger.warning("⚠️ gemma:3b model not found")
         except Exception as e:
             logger.warning(f"⚠️ Gemma not available: {e}")
             self.is_connected = False

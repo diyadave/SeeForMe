@@ -181,70 +181,31 @@ def on_speech_recognized(data):
         print(f"\n🎯 SPEECH RECEIVED: {text}")
         logger.info(f"🗣️ Speech: {text}")
         
-        # Fast threaded processing to avoid worker timeouts
-        def process_with_ai():
-            """Process in background thread to prevent worker timeout"""
-            global assistant_coordinator
-            try:
-                if assistant_coordinator:
-                    logger.info(f"🤖 Processing with assistant coordinator...")  
-                    assistant_coordinator.on_speech_recognized(data.get('text', ''), 'en', data.get('confidence', 0.8))
-                else:
-                    # Initialize coordinator if not available
-                    logger.info(f"🔄 Initializing assistant coordinator...")
-                    from app.assistant_coordinator import AssistantCoordinator
-                    assistant_coordinator = AssistantCoordinator()
-                    assistant_coordinator.initialize()
-                    assistant_coordinator.on_speech_recognized(data.get('text', ''), 'en', data.get('confidence', 0.8))
-            except Exception as e:
-                logger.error(f"❌ AI processing error: {e}")
-                # Fallback response
-                emit('assistant_response', {
-                    'text': f"I heard you say '{data.get('text', '')}'. I'm your emotionally intelligent AI companion, here to listen and support you.",
-                    'emotion': 'caring',
-                    'speak': True
-                })
+        # FAST RESPONSE with Gemma 3b - No threading to avoid timeout
+        from simple_gemma_agent import simple_agent
         
-        # Start processing in background thread
-        import threading
-        threading.Thread(target=process_with_ai, daemon=True).start()
-        return  # Don't block the main thread
+        # Extract user info
+        user_text = data.get('text', '')
+        user_name = "friend"  # Will be extracted properly later
         
-        # Send immediate response
+        # Get AI response from Gemma 3b
+        logger.info(f"🤖 Getting Gemma 3b response...")
+        ai_response = simple_agent.get_response(user_text, user_name, 'neutral')
+        
+        # Send response immediately
         emit('assistant_response', {
-            'text': response,
+            'text': ai_response,
             'emotion': 'caring',
             'speak': True
         })
         
-        print(f"✅ Sent response: {response[:50]}...")
-        
+        logger.info(f"✅ Gemma 3b response sent: {ai_response[:50]}...")
+            
     except Exception as e:
-        print(f"❌ Speech handler error: {e}")
+        logger.error(f"❌ Speech processing error: {e}")
         emit('assistant_response', {
-            'text': 'I heard you speaking, but had trouble processing your request. Please try again.',
-            'emotion': 'apologetic',
-            'speak': True
-        })
-    
-    text = data.get('text', '')
-    language = data.get('language', 'en')
-    confidence = data.get('confidence', 1.0)
-    
-    logger.info(f"🗣️ BACKEND RECEIVED: Speech '{text}' ({language}, {confidence:.2f})")
-    print(f"🗣️ BACKEND RECEIVED: Speech '{text}' ({language}, {confidence:.2f})")
-    
-    if assistant_coordinator:
-        logger.info(f"🔄 BACKEND: Sending to coordinator for processing...")
-        print(f"🔄 BACKEND: Processing speech: '{text}' -> coordinator")
-        assistant_coordinator.on_speech_recognized(text, language, confidence)
-    else:
-        logger.error("❌ BACKEND: Assistant coordinator not available!")
-        print("❌ BACKEND: Assistant coordinator not available!")
-        # Send immediate response for testing
-        emit('assistant_response', {
-            'text': f"Hello! I heard you say '{text}'. I'm SeeForMe, your AI assistant working for your Kaggle competition!",
-            'emotion': 'friendly',
+            'text': f"I heard you say '{data.get('text', '')}'. I'm your emotionally intelligent AI companion powered by Gemma 3b, here to support you.",
+            'emotion': 'caring',
             'speak': True
         })
 
