@@ -156,6 +156,11 @@ def on_get_status():
 @socketio.on('speech_recognized')
 def on_speech_recognized(data):
     """Handle speech recognition results"""
+    print("=" * 50)
+    print("🔥 SPEECH EVENT RECEIVED!")
+    print(f"🔥 Data: {data}")
+    print("=" * 50)
+    
     text = data.get('text', '')
     language = data.get('language', 'en')
     confidence = data.get('confidence', 1.0)

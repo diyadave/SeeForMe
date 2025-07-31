@@ -380,8 +380,15 @@ class AssistantCoordinator:
             'intent': intent
         }
         
-        # Always use fallback for immediate response - no dependency on complex AI models
-        response = self._fallback_text_response(text, intent)
+        # Use your Gemma 3n integration for proper AI responses
+        try:
+            if self.gemma_connect:
+                response = self.gemma_connect.get_response(text, self.user_context)
+            else:
+                response = self._fallback_text_response(text, intent)
+        except Exception as e:
+            logger.error(f"❌ Gemma 3n error: {e}")
+            response = self._fallback_text_response(text, intent)
         logger.info(f"💬 Generated response: '{response}'")
         
         # Emit response
