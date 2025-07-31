@@ -130,19 +130,54 @@ def on_stop_assistant():
 
 @socketio.on('voice_input')
 def on_voice_input(data):
-    """Handle voice input from client"""
-    text = data.get('text', '')
+    """Handle voice input from client - CORE RESPONSE SYSTEM"""
+    user_text = data.get('text', '')
     confidence = data.get('confidence', 0.0)
     language = data.get('language', 'en')
     
-    logger.info(f"🗣️ Voice input: '{text}' (confidence: {confidence:.2f})")
+    logger.info(f"🗣️ Voice input: '{user_text}' (confidence: {confidence:.2f})")
+    print(f"🎯 VOICE INPUT: {user_text}")
     
-    # Process voice input directly without coordinator
+    # Extract name properly
+    import re
+    user_name = "friend"
+    if "my name is" in user_text.lower():
+        match = re.search(r"my name is\s+(\w+)", user_text.lower())
+        if match:
+            user_name = match.group(1).capitalize()
+    elif "call me" in user_text.lower():
+        match = re.search(r"call me\s+(\w+)", user_text.lower())
+        if match:
+            user_name = match.group(1).capitalize()
+    
+    # Enhanced emotional intelligence responses
+    if user_name != "friend":
+        response = f"Hello {user_name}! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally. How are you feeling today?"
+    elif "talk" in user_text.lower() or "hello" in user_text.lower():
+        response = f"Hello there! Yes, I'd love to talk with you, {user_name}! I'm your emotional support companion, and I'm here to listen and chat about whatever is on your mind. How are you feeling today?"
+    elif "sad" in user_text.lower() or "bad" in user_text.lower():
+        response = "I'm sorry you're having a tough time. I can hear that you're going through something difficult right now. I'm here to listen and support you. You're not alone, and I care about how you're feeling."
+    elif "happy" in user_text.lower() or "good" in user_text.lower():
+        response = "That's wonderful to hear! I'm so glad you're feeling good today. Your happiness brings me joy too. What's been making you feel so positive?"
+    else:
+        response = f"I heard you say '{user_text}'. I'm your caring AI companion, always here to provide emotional support and understanding. Tell me more about what's on your mind, {user_name}."
+    
+    # Basic emotion detection
+    detected_emotion = "neutral"
+    if any(word in user_text.lower() for word in ["sad", "upset", "angry", "frustrated"]):
+        detected_emotion = "sad"
+    elif any(word in user_text.lower() for word in ["happy", "good", "great", "wonderful"]):
+        detected_emotion = "happy"
+    
+    # Send response immediately
     emit('assistant_response', {
-        'text': f"I heard you say: {text}",
-        'emotion': 'neutral',
+        'text': response,
+        'emotion': detected_emotion,
+        'user_emotion': detected_emotion,
         'speak': True
     })
+    
+    print(f"✅ SENT: {response}")
 
 @socketio.on('camera_permission')
 def on_camera_permission(data):
