@@ -58,7 +58,8 @@ class AssistantCoordinator:
         try:
             # Initialize speech recognition
             from .speech_handler import SpeechHandler
-            self.speech_handler = SpeechHandler(self.on_speech_recognized)
+            self.speech_handler = SpeechHandler()
+            self.speech_handler.set_callback(self.on_speech_recognized)
             logger.info("✅ Speech handler initialized")
             
             # Initialize camera switching

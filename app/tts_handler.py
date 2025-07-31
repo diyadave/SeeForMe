@@ -1,312 +1,419 @@
 #!/usr/bin/env python3
 """
-TTS Handler - Multi-language text-to-speech
-Offline English via pyttsx3, online fallback for Hindi/Gujarati via gTTS
+Multi-language Text-to-Speech Handler
+Supports offline English TTS with pyttsx3 and online Hindi/Gujarati with gTTS fallback
 """
 
-import logging
 import os
-import threading
 import time
+import logging
+import threading
 import tempfile
-from typing import Optional, Dict, Any
-import pygame
+import queue
+from pathlib import Path
+from typing import Dict, Any, Optional, List
+import requests
+from io import BytesIO
+import hashlib
+
+try:
+    import pyttsx3  # pip install pyttsx3
+except ImportError:
+    pyttsx3 = None
+    logging.error("❌ pyttsx3 not installed. Run: pip install pyttsx3")
+
+try:
+    from gtts import gTTS  # pip install gtts
+except ImportError:
+    gTTS = None
+    logging.warning("⚠️ gTTS not installed. Hindi/Gujarati TTS will be limited. Run: pip install gtts")
+
+try:
+    import pygame  # pip install pygame
+    pygame.mixer.init()
+except ImportError:
+    pygame = None
+    logging.warning("⚠️ pygame not installed. Using system audio player. Run: pip install pygame")
 
 logger = logging.getLogger(__name__)
 
+
 class TTSHandler:
-    """Multi-language text-to-speech handler"""
+    """Advanced Text-to-Speech handler with multi-language support"""
     
     def __init__(self):
-        self.is_initialized = False
+        logger.info("🔊 Initializing TTS Handler...")
+        
+        # TTS engines
         self.pyttsx3_engine = None
-        self.pygame_initialized = False
+        self.gtts_available = False
+        self.pygame_available = bool(pygame)
         
-        # Language support
-        self.supported_languages = ['en', 'hi', 'gu']
-        self.offline_languages = ['en']  # Languages with offline support
-        
-        # Audio settings
-        self.speech_rate = 150
+        # Configuration
+        self.default_language = 'en'
+        self.speech_rate = 150  # Words per minute
         self.volume = 0.9
         
-        # Threading
-        self.speech_lock = threading.Lock()
+        # Language settings
+        self.language_config = {
+            'en': {
+                'engine': 'pyttsx3',
+                'voice_id': None,  # Will be set during initialization
+                'rate': 150,
+                'volume': 0.9
+            },
+            'hi': {
+                'engine': 'gtts',
+                'gtts_lang': 'hi',
+                'rate': 130,
+                'volume': 0.9,
+                'fallback_text': 'I understand Hindi but cannot speak it right now.'
+            },
+            'gu': {
+                'engine': 'gtts',
+                'gtts_lang': 'gu',
+                'rate': 130,
+                'volume': 0.9,
+                'fallback_text': 'I understand Gujarati but cannot speak it right now.'
+            }
+        }
+        
+        # State management
         self.is_speaking = False
+        self.speaking_thread = None
+        self.speech_queue = queue.Queue()
         
-        # Initialize components
-        self.initialize_offline_tts()
-        self.initialize_pygame()
+        # Performance tracking
+        self.speech_count = 0
+        self.successful_speeches = 0
+        self.average_speech_time = 0.0
         
-        logger.info("🔊 TTS handler initialized")
+        # Cache for TTS audio files
+        self.audio_cache = {}
+        self.cache_dir = Path("tts_cache")
+        self.cache_dir.mkdir(exist_ok=True)
+        
+        # Initialize engines
+        self.initialize_engines()
+        
+        logger.info("✅ TTS Handler initialized")
     
-    def initialize_offline_tts(self):
-        """Initialize pyttsx3 for offline English TTS"""
-        try:
-            import pyttsx3
-            
-            self.pyttsx3_engine = pyttsx3.init()
-            
-            # Configure voice properties
-            self.pyttsx3_engine.setProperty('rate', self.speech_rate)
-            self.pyttsx3_engine.setProperty('volume', self.volume)
-            
-            # Try to set a natural voice
-            voices = self.pyttsx3_engine.getProperty('voices')
-            if voices:
-                # Prefer female voices for accessibility
-                female_voices = [v for v in voices if 'female' in v.name.lower() or 'woman' in v.name.lower()]
-                if female_voices:
-                    self.pyttsx3_engine.setProperty('voice', female_voices[0].id)
+    def initialize_engines(self):
+        """Initialize TTS engines"""
+        
+        # Initialize pyttsx3 for English
+        if pyttsx3:
+            try:
+                self.pyttsx3_engine = pyttsx3.init()
+                
+                # Configure pyttsx3
+                self.configure_pyttsx3()
+                
+                logger.info("✅ pyttsx3 engine initialized")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize pyttsx3: {e}")
+                self.pyttsx3_engine = None
+        
+        # Check gTTS availability
+        if gTTS:
+            try:
+                # Test internet connection for gTTS
+                test_response = requests.get('https://translate.google.com', timeout=3)
+                if test_response.status_code == 200:
+                    self.gtts_available = True
+                    logger.info("✅ gTTS available (internet connection active)")
                 else:
-                    self.pyttsx3_engine.setProperty('voice', voices[0].id)
-            
-            self.is_initialized = True
-            logger.info("✅ Offline TTS (pyttsx3) initialized")
-            
-        except ImportError:
-            logger.warning("⚠️ pyttsx3 not available, using fallback TTS")
-        except Exception as e:
-            logger.error(f"❌ Offline TTS initialization failed: {e}")
+                    self.gtts_available = False
+                    logger.warning("⚠️ gTTS unavailable (no internet connection)")
+            except:
+                self.gtts_available = False
+                logger.warning("⚠️ gTTS unavailable (no internet connection)")
+        
+        # Initialize pygame mixer
+        if pygame and not pygame.mixer.get_init():
+            try:
+                pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=1024)
+                logger.info("✅ pygame audio mixer initialized")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize pygame mixer: {e}")
+                self.pygame_available = False
     
-    def initialize_pygame(self):
-        """Initialize pygame for audio playback"""
-        try:
-            pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-            self.pygame_initialized = True
-            logger.info("✅ Pygame audio initialized")
-        except Exception as e:
-            logger.error(f"❌ Pygame initialization failed: {e}")
-    
-    def speak(self, text: str, language: str = 'en', blocking: bool = False):
-        """Speak text in specified language"""
-        if not text or not text.strip():
+    def configure_pyttsx3(self):
+        """Configure pyttsx3 engine settings"""
+        if not self.pyttsx3_engine:
             return
         
-        # Clean text
-        text = text.strip()
-        
-        if language in self.offline_languages and self.pyttsx3_engine:
-            self._speak_offline(text, blocking)
-        else:
-            self._speak_online(text, language, blocking)
-    
-    def _speak_offline(self, text: str, blocking: bool = False):
-        """Speak using offline pyttsx3"""
-        with self.speech_lock:
-            try:
-                self.is_speaking = True
+        try:
+            # Get available voices
+            voices = self.pyttsx3_engine.getProperty('voices')
+            
+            if voices:
+                # Try to find a good English voice
+                best_voice = None
                 
-                if blocking:
-                    self.pyttsx3_engine.say(text)
-                    self.pyttsx3_engine.runAndWait()
+                for voice in voices:
+                    voice_name = voice.name.lower()
+                    voice_id = voice.id.lower()
+                    
+                    # Prefer female voices for accessibility
+                    if any(keyword in voice_name for keyword in ['zira', 'hazel', 'female', 'woman']):
+                        best_voice = voice.id
+                        break
+                    elif any(keyword in voice_id for keyword in ['english', 'en-us', 'en_us']):
+                        best_voice = voice.id
+                
+                if best_voice:
+                    self.pyttsx3_engine.setProperty('voice', best_voice)
+                    self.language_config['en']['voice_id'] = best_voice
+                    logger.info(f"🎭 Selected voice: {best_voice}")
                 else:
-                    # Non-blocking speech
-                    def speak_thread():
-                        try:
-                            self.pyttsx3_engine.say(text)
-                            self.pyttsx3_engine.runAndWait()
-                        except Exception as e:
-                            logger.error(f"❌ Offline speech failed: {e}")
-                        finally:
-                            self.is_speaking = False
-                    
-                    thread = threading.Thread(target=speak_thread, daemon=True)
-                    thread.start()
-                
-                logger.info(f"🗣️ Speaking offline: '{text[:50]}...'")
-                
-            except Exception as e:
-                logger.error(f"❌ Offline speech failed: {e}")
-                self.is_speaking = False
+                    # Use first available voice
+                    self.pyttsx3_engine.setProperty('voice', voices[0].id)
+                    logger.info(f"🎭 Using default voice: {voices[0].name}")
+            
+            # Set speech rate
+            self.pyttsx3_engine.setProperty('rate', self.speech_rate)
+            
+            # Set volume
+            self.pyttsx3_engine.setProperty('volume', self.volume)
+            
+            logger.info(f"🔧 pyttsx3 configured: rate={self.speech_rate}, volume={self.volume}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to configure pyttsx3: {e}")
     
-    def _speak_online(self, text: str, language: str = 'en', blocking: bool = False):
-        """Speak using online gTTS"""
-        if not blocking:
-            # Non-blocking speech
-            thread = threading.Thread(
-                target=self._speak_online_blocking, 
-                args=(text, language), 
-                daemon=True
-            )
-            thread.start()
-        else:
-            self._speak_online_blocking(text, language)
-    
-    def _speak_online_blocking(self, text: str, language: str = 'en'):
-        """Blocking online speech using gTTS"""
-        with self.speech_lock:
-            try:
-                from gtts import gTTS
-                
-                self.is_speaking = True
-                
-                # Map language codes
-                lang_map = {
-                    'en': 'en',
-                    'hi': 'hi',
-                    'gu': 'gu'
-                }
-                gtts_lang = lang_map.get(language, 'en')
-                
-                # Generate speech
-                tts = gTTS(text=text, lang=gtts_lang, slow=False)
-                
-                # Save to temporary file
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
-                    temp_path = tmp_file.name
-                    tts.save(temp_path)
-                
-                # Play audio using pygame
-                if self.pygame_initialized:
-                    pygame.mixer.music.load(temp_path)
-                    pygame.mixer.music.play()
-                    
-                    # Wait for playback to complete
-                    while pygame.mixer.music.get_busy():
-                        time.sleep(0.1)
-                
-                # Clean up temporary file
+    def speak(self, text: str, language: str = 'en', priority: bool = False):
+        """
+        Speak text in specified language
+        
+        Args:
+            text: Text to speak
+            language: Language code ('en', 'hi', 'gu')
+            priority: If True, speak immediately (interrupt current speech)
+        """
+        if not text or not text.strip():
+            logger.warning("⚠️ Empty text provided for TTS")
+            return
+        
+        text = text.strip()
+        logger.info(f"🔊 Speaking [{language}]: '{text[:50]}{'...' if len(text) > 50 else ''}'")
+        
+        # Add to speech queue
+        speech_item = {
+            'text': text,
+            'language': language,
+            'timestamp': time.time(),
+            'priority': priority
+        }
+        
+        if priority:
+            # Stop current speech and clear queue
+            self.stop_speaking()
+            # Add to front of queue
+            temp_queue = queue.Queue()
+            temp_queue.put(speech_item)
+            while not self.speech_queue.empty():
                 try:
-                    os.unlink(temp_path)
-                except:
-                    pass
-                
-                logger.info(f"🗣️ Speaking online ({language}): '{text[:50]}...'")
-                
-            except ImportError:
-                logger.warning("⚠️ gTTS not available, using fallback")
-                self._fallback_speak(text)
-            except Exception as e:
-                logger.error(f"❌ Online speech failed: {e}")
-                self._fallback_speak(text)
-            finally:
-                self.is_speaking = False
-    
-    def _fallback_speak(self, text: str):
-        """Fallback speech method"""
-        # Try offline TTS as fallback
-        if self.pyttsx3_engine:
-            self._speak_offline(text, blocking=False)
+                    temp_queue.put(self.speech_queue.get_nowait())
+                except queue.Empty:
+                    break
+            self.speech_queue = temp_queue
         else:
-            logger.warning(f"⚠️ Cannot speak: '{text[:50]}...' (no TTS available)")
+            self.speech_queue.put(speech_item)
+        
+        # Start speech worker if not running
+        if not self.is_speaking:
+            self.start_speech_worker()
+    
+    def start_speech_worker(self):
+        """Start background speech worker"""
+        if self.is_speaking:
+            return
+        
+        self.is_speaking = True
+        self.speaking_thread = threading.Thread(target=self.speech_worker, daemon=True)
+        self.speaking_thread.start()
+    
+    def speech_worker(self):
+        """Background worker for speech processing"""
+        logger.info("🎭 Speech worker started")
+        
+        while self.is_speaking:
+            try:
+                # Get speech item from queue
+                try:
+                    speech_item = self.speech_queue.get(timeout=1)
+                except queue.Empty:
+                    # No more speech items, stop worker
+                    break
+                
+                # Process speech
+                start_time = time.time()
+                success = self.process_speech_item(speech_item)
+                speech_time = time.time() - start_time
+                
+                # Update statistics
+                self.speech_count += 1
+                if success:
+                    self.successful_speeches += 1
+                    self.update_average_speech_time(speech_time)
+                
+            except Exception as e:
+                logger.error(f"❌ Speech worker error: {e}")
+        
+        self.is_speaking = False
+        logger.info("🎭 Speech worker stopped")
+    
+    def process_speech_item(self, speech_item: Dict[str, Any]) -> bool:
+        """Process individual speech item"""
+        text = speech_item['text']
+        language = speech_item['language']
+        
+        try:
+            if language == 'en':
+                return self.speak_english(text)
+            elif language in ['hi', 'gu']:
+                return self.speak_gtts(text, language)
+            else:
+                logger.warning(f"⚠️ Unsupported language: {language}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to process speech item: {e}")
+            return False
+    
+    def speak_english(self, text: str) -> bool:
+        """Speak English text using pyttsx3"""
+        if not self.pyttsx3_engine:
+            logger.error("❌ pyttsx3 engine not available")
+            return False
+        
+        try:
+            # Use pyttsx3 for offline English TTS
+            self.pyttsx3_engine.say(text)
+            self.pyttsx3_engine.runAndWait()
+            logger.info("✅ English speech completed")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ pyttsx3 speech failed: {e}")
+            return False
+    
+    def speak_gtts(self, text: str, language: str) -> bool:
+        """Speak text using gTTS (Google Text-to-Speech)"""
+        if not self.gtts_available:
+            logger.warning(f"⚠️ gTTS not available for {language}")
+            # Fallback to English explanation
+            fallback_text = self.language_config[language]['fallback_text']
+            return self.speak_english(fallback_text)
+        
+        try:
+            # Check cache first
+            cache_key = self.get_cache_key(text, language)
+            cached_file = self.get_cached_audio(cache_key)
+            
+            if cached_file and cached_file.exists():
+                logger.info(f"🗄️ Using cached audio for {language}")
+                return self.play_audio_file(cached_file)
+            
+            # Generate TTS using gTTS
+            gtts_lang = self.language_config[language]['gtts_lang']
+            tts = gTTS(text=text, lang=gtts_lang, slow=False)
+            
+            # Save to cache
+            cache_file = self.cache_dir / f"{cache_key}.mp3"
+            tts.save(str(cache_file))
+            
+            # Play audio
+            success = self.play_audio_file(cache_file)
+            
+            if success:
+                logger.info(f"✅ {language.upper()} speech completed")
+            else:
+                logger.error(f"❌ Failed to play {language} audio")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ gTTS speech failed for {language}: {e}")
+            # Fallback to English explanation
+            fallback_text = self.language_config[language]['fallback_text']
+            return self.speak_english(fallback_text)
+    
+    def play_audio_file(self, file_path: Path) -> bool:
+        """Play audio file using pygame or system player"""
+        try:
+            if self.pygame_available:
+                # Use pygame for audio playback
+                pygame.mixer.music.load(str(file_path))
+                pygame.mixer.music.play()
+                
+                # Wait for playback to complete
+                while pygame.mixer.music.get_busy():
+                    time.sleep(0.1)
+                
+                return True
+            else:
+                # Fallback to system audio player
+                import subprocess
+                subprocess.run(['mpg123', str(file_path)], capture_output=True)
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Audio playback failed: {e}")
+            return False
+    
+    def get_cache_key(self, text: str, language: str) -> str:
+        """Generate cache key for text and language"""
+        content = f"{text}_{language}".encode('utf-8')
+        return hashlib.md5(content).hexdigest()
+    
+    def get_cached_audio(self, cache_key: str) -> Optional[Path]:
+        """Get cached audio file if exists"""
+        cache_file = self.cache_dir / f"{cache_key}.mp3"
+        return cache_file if cache_file.exists() else None
+    
+    def update_average_speech_time(self, speech_time: float):
+        """Update average speech time"""
+        if self.successful_speeches == 1:
+            self.average_speech_time = speech_time
+        else:
+            self.average_speech_time = (
+                (self.average_speech_time * (self.successful_speeches - 1) + speech_time) 
+                / self.successful_speeches
+            )
     
     def stop_speaking(self):
         """Stop current speech"""
-        try:
-            if self.pyttsx3_engine:
+        if self.pyttsx3_engine:
+            try:
                 self.pyttsx3_engine.stop()
-            
-            if self.pygame_initialized:
+            except:
+                pass
+        
+        if self.pygame_available:
+            try:
                 pygame.mixer.music.stop()
-            
-            self.is_speaking = False
-            logger.info("🛑 Speech stopped")
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to stop speech: {e}")
-    
-    def set_speech_rate(self, rate: int):
-        """Set speech rate (words per minute)"""
-        if self.pyttsx3_engine:
-            self.speech_rate = max(50, min(300, rate))
-            self.pyttsx3_engine.setProperty('rate', self.speech_rate)
-            logger.info(f"🎚️ Speech rate set to {self.speech_rate} WPM")
-    
-    def set_volume(self, volume: float):
-        """Set speech volume (0.0 to 1.0)"""
-        if self.pyttsx3_engine:
-            self.volume = max(0.0, min(1.0, volume))
-            self.pyttsx3_engine.setProperty('volume', self.volume)
-            logger.info(f"🔊 Volume set to {self.volume}")
-    
-    def get_available_voices(self) -> list:
-        """Get list of available voices"""
-        voices = []
+            except:
+                pass
         
-        if self.pyttsx3_engine:
+        # Clear speech queue
+        while not self.speech_queue.empty():
             try:
-                pyttsx3_voices = self.pyttsx3_engine.getProperty('voices')
-                for voice in pyttsx3_voices:
-                    voices.append({
-                        'id': voice.id,
-                        'name': voice.name,
-                        'language': getattr(voice, 'languages', ['en'])[0] if hasattr(voice, 'languages') else 'en',
-                        'gender': 'female' if 'female' in voice.name.lower() else 'male',
-                        'engine': 'pyttsx3'
-                    })
-            except Exception as e:
-                logger.error(f"❌ Failed to get voices: {e}")
-        
-        return voices
-    
-    def set_voice(self, voice_id: str):
-        """Set specific voice by ID"""
-        if self.pyttsx3_engine:
-            try:
-                self.pyttsx3_engine.setProperty('voice', voice_id)
-                logger.info(f"🎭 Voice set to: {voice_id}")
-            except Exception as e:
-                logger.error(f"❌ Failed to set voice: {e}")
-    
-    def test_speech(self, language: str = 'en'):
-        """Test speech functionality"""
-        test_messages = {
-            'en': "Hello! This is a test of the speech system. I am SeeForMe, your vision assistant.",
-            'hi': "नमस्ते! यह स्पीच सिस्टम का टेस्ट है। मैं सीफॉरमी हूं, आपका विज़न असिस्टेंट।",
-            'gu': "નમસ્તે! આ સ્પીચ સિસ્ટમનો ટેસ્ટ છે. હું સીફોરમી છું, તમારો વિઝન આસિસ્ટન્ટ."
-        }
-        
-        test_text = test_messages.get(language, test_messages['en'])
-        self.speak(test_text, language, blocking=True)
-        
-        return {
-            'language': language,
-            'text': test_text,
-            'method': 'offline' if language in self.offline_languages else 'online',
-            'success': True
-        }
-    
-    def is_language_supported(self, language: str) -> bool:
-        """Check if language is supported"""
-        return language in self.supported_languages
+                self.speech_queue.get_nowait()
+            except queue.Empty:
+                break
     
     def get_status(self) -> Dict[str, Any]:
         """Get current TTS status"""
         return {
-            'status': 'ready' if self.is_initialized else 'limited',
-            'speaking': self.is_speaking,
-            'offline_engine': self.pyttsx3_engine is not None,
-            'pygame_audio': self.pygame_initialized,
-            'supported_languages': self.supported_languages,
-            'offline_languages': self.offline_languages,
-            'speech_rate': self.speech_rate,
-            'volume': self.volume,
-            'available_voices': len(self.get_available_voices())
+            'status': 'speaking' if self.is_speaking else 'ready',
+            'pyttsx3_available': bool(self.pyttsx3_engine),
+            'gtts_available': self.gtts_available,
+            'pygame_available': self.pygame_available,
+            'speech_count': self.speech_count,
+            'success_rate': self.successful_speeches / max(self.speech_count, 1),
+            'average_speech_time': self.average_speech_time,
+            'queue_size': self.speech_queue.qsize()
         }
-    
-    def cleanup(self):
-        """Cleanup TTS resources"""
-        logger.info("🧹 Cleaning up TTS handler...")
-        
-        # Stop any ongoing speech
-        self.stop_speaking()
-        
-        # Cleanup pyttsx3
-        if self.pyttsx3_engine:
-            try:
-                self.pyttsx3_engine.stop()
-            except:
-                pass
-            self.pyttsx3_engine = None
-        
-        # Cleanup pygame
-        if self.pygame_initialized:
-            try:
-                pygame.mixer.quit()
-            except:
-                pass
-            self.pygame_initialized = False
-        
-        self.is_initialized = False
-        logger.info("✅ TTS cleanup completed")
