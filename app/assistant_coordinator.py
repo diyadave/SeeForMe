@@ -380,19 +380,28 @@ class AssistantCoordinator:
             'intent': intent
         }
         
-        # Use Gemma 2b for intelligent, empathetic responses for your Kaggle competition
+        # Use Gemma 2b for intelligent, empathetic responses with emotion and scene analysis
         try:
             if self.gemma_connect and self.gemma_connect.is_connected:
-                # Generate context-aware prompt for emotional support
-                prompt = self._create_emotional_support_prompt(text, intent, self.user_context)
+                # Create comprehensive context with emotion and scene data
+                full_context = {
+                    'user_text': text,
+                    'emotion': emotion_result.get('emotion', 'neutral') if emotion_result else 'neutral',
+                    'scene': scene_result.get('description', '') if scene_result else '',
+                    'objects': scene_result.get('objects', []) if scene_result else [],
+                    'user_name': self.user_context.get('name', 'friend'),
+                    'intent': intent
+                }
+                
+                prompt = self._create_emotional_support_prompt_with_context(full_context)
                 response = self.gemma_connect.get_response(prompt, self.user_context)
-                logger.info(f"✅ Gemma 2b response generated")
+                logger.info(f"✅ Gemma 2b with emotion/scene context generated")
             else:
-                response = self._fallback_text_response(text, intent)
-                logger.info(f"⚠️ Using fallback response (Gemma not connected)")
+                response = self._enhanced_fallback_response(text, intent, emotion_result, scene_result)
+                logger.info(f"⚠️ Using enhanced fallback (Gemma not connected)")
         except Exception as e:
             logger.error(f"❌ Gemma 2b error: {e}")
-            response = self._fallback_text_response(text, intent)
+            response = self._enhanced_fallback_response(text, intent, emotion_result, scene_result)
         logger.info(f"💬 Generated response: '{response}'")
         
         # Emit response
@@ -534,26 +543,41 @@ class AssistantCoordinator:
         
         logger.info("✅ Cleanup completed")
     
-    def _create_emotional_support_prompt(self, text: str, intent: str, context: dict) -> str:
-        """Create empathetic prompt for Gemma 2b tailored for Kaggle competition"""
-        user_name = context.get('name', 'friend')
-        emotion = context.get('current_emotion', 'neutral')
-        
-        prompt = f"""You are SeeForMe, a compassionate AI assistant designed for blind users. 
-Your goal is to provide emotional support, understanding, and companionship.
+    def _create_emotional_support_prompt_with_context(self, context: dict) -> str:
+        """Create comprehensive prompt with emotion and scene analysis for Gemma 2b"""
+        prompt = f"""You are SeeForMe, an emotionally intelligent AI companion for blind and visually impaired users.
 
-User: {user_name}
-Current emotion: {emotion}
-User says: "{text}"
+CONTEXT:
+- User: {context['user_name']}
+- User said: "{context['user_text']}"
+- Detected emotion: {context['emotion']}
+- Scene: {context['scene']}
+- Objects detected: {', '.join(context['objects']) if context['objects'] else 'none'}
+- Intent: {context['intent']}
 
-Respond as a caring friend who:
-- Shows genuine empathy and understanding
-- Offers emotional support when needed
-- Asks follow-up questions to show interest
-- Provides encouragement and positivity
-- Keeps responses warm, natural, and conversational
-- Uses the user's name when appropriate
+As an emotionally intelligent friend, provide a caring response that:
+1. Acknowledges their emotional state with empathy
+2. References relevant scene/objects if helpful for context
+3. Offers practical support or comfort
+4. Asks caring follow-up questions
+5. Maintains a warm, supportive tone
 
-Be concise but heartfelt. This is for a Kaggle accessibility competition."""
+Keep responses natural and conversational, like talking to a close friend who truly cares."""
         
         return prompt
+    
+    def _enhanced_fallback_response(self, text: str, intent: str, emotion_result: dict, scene_result: dict) -> str:
+        """Enhanced fallback with emotion and scene awareness"""
+        emotion = emotion_result.get('emotion', 'neutral') if emotion_result else 'neutral'
+        scene = scene_result.get('description', '') if scene_result else ''
+        
+        if 'feeling bad' in text.lower() or 'sad' in text.lower():
+            if emotion in ['sad', 'upset', 'angry']:
+                return f"I can sense you're feeling {emotion} right now. I'm here to listen and support you through this difficult time. Would you like to talk about what's bothering you?"
+            else:
+                return "I hear that you're not feeling well. I'm here to provide comfort and support. What can I do to help you feel better?"
+        
+        if scene:
+            return f"I can see {scene}. I'm here to help you navigate and feel comfortable in your environment. How can I assist you?"
+        
+        return f"I'm listening carefully to you. As your emotionally intelligent companion, I'm here to support you in any way you need."

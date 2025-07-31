@@ -181,18 +181,38 @@ def on_speech_recognized(data):
         print(f"\n🎯 SPEECH RECEIVED: {text}")
         logger.info(f"🗣️ Speech: {text}")
         
-        # Emotional support responses like you wanted
-        if 'feeling bad' in text or 'sad' in text or 'tired' in text:
-            if 'diya' in text:
-                response = "Oh Diya, I'm so sorry you're feeling this way. I can hear the pain in your words, and I want you to know that I'm here for you. You're not alone in this. Sometimes when we feel bad, it helps to talk about what's bothering us. Would you like to share what's making you feel this way? Or would you prefer if I suggest some things that might help you feel better?"
+        # FAST AI Processing with Gemma 2b + Computer Vision
+        try:
+            from services.fast_gemma import fast_gemma
+            from services.simple_vision import simple_vision
+            
+            # Initialize camera if not started
+            if not simple_vision.is_active:
+                simple_vision.start_camera(0)
+            
+            # Quick scene analysis
+            scene_data = simple_vision.capture_and_analyze()
+            emotion_data = simple_vision.detect_faces_simple()
+            
+            # Get AI response with context
+            emotion = emotion_data.get('emotion', 'neutral') if emotion_data else 'neutral'
+            scene = scene_data.get('description', '') if scene_data else ''
+            objects = scene_data.get('objects', []) if scene_data else []
+            
+            response = fast_gemma.get_fast_response(data.get('text', ''), emotion, scene, objects)
+            
+            logger.info(f"✅ Fast AI with scene: {scene}, emotion: {emotion}")
+            
+        except Exception as e:
+            logger.error(f"❌ Fast AI processing error: {e}")
+            
+            # Enhanced fallback with emotional intelligence
+            if 'feeling bad' in text or 'sad' in text or 'tired' in text:
+                response = "I can sense you're going through a difficult time. I'm here as your emotionally intelligent companion to listen and support you. What's troubling you right now?"
+            elif 'hello' in text or 'hi' in text:
+                response = "Hello! I'm SeeForMe, your emotionally intelligent AI friend. I can understand your emotions, see your surroundings, and provide caring support. How are you feeling today?"
             else:
-                response = "I'm really sorry to hear you're feeling bad right now. That sounds really tough, and I want you to know that your feelings are completely valid. I'm here to listen and support you. Would you like to talk about what's bothering you, or would you prefer some suggestions that might help you feel better?"
-        elif 'hello' in text and 'diya' in text:
-            response = "Hello Diya! It's wonderful to meet you. I'm SeeForMe, your voice assistant, and I'm here to help and support you in any way I can. How are you feeling today?"
-        elif 'hello' in text or 'hi' in text:
-            response = "Hello there! I'm SeeForMe, your voice assistant. I'm here to listen, support you, and help with anything you need. How can I help you today?"
-        else:
-            response = f"I heard you say: '{data.get('text', '')}'. I'm listening and ready to help you with whatever you need."
+                response = f"I heard you say '{data.get('text', '')}'. I'm analyzing your emotions and environment to give you the best support as your AI companion."
         
         # Send immediate response
         emit('assistant_response', {
