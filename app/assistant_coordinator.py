@@ -380,14 +380,18 @@ class AssistantCoordinator:
             'intent': intent
         }
         
-        # Use your Gemma 3n integration for proper AI responses
+        # Use Gemma 2b for intelligent, empathetic responses for your Kaggle competition
         try:
-            if self.gemma_connect:
-                response = self.gemma_connect.get_response(text, self.user_context)
+            if self.gemma_connect and self.gemma_connect.is_connected:
+                # Generate context-aware prompt for emotional support
+                prompt = self._create_emotional_support_prompt(text, intent, self.user_context)
+                response = self.gemma_connect.get_response(prompt, self.user_context)
+                logger.info(f"✅ Gemma 2b response generated")
             else:
                 response = self._fallback_text_response(text, intent)
+                logger.info(f"⚠️ Using fallback response (Gemma not connected)")
         except Exception as e:
-            logger.error(f"❌ Gemma 3n error: {e}")
+            logger.error(f"❌ Gemma 2b error: {e}")
             response = self._fallback_text_response(text, intent)
         logger.info(f"💬 Generated response: '{response}'")
         
@@ -529,3 +533,27 @@ class AssistantCoordinator:
             self.tts_handler.cleanup()
         
         logger.info("✅ Cleanup completed")
+    
+    def _create_emotional_support_prompt(self, text: str, intent: str, context: dict) -> str:
+        """Create empathetic prompt for Gemma 2b tailored for Kaggle competition"""
+        user_name = context.get('name', 'friend')
+        emotion = context.get('current_emotion', 'neutral')
+        
+        prompt = f"""You are SeeForMe, a compassionate AI assistant designed for blind users. 
+Your goal is to provide emotional support, understanding, and companionship.
+
+User: {user_name}
+Current emotion: {emotion}
+User says: "{text}"
+
+Respond as a caring friend who:
+- Shows genuine empathy and understanding
+- Offers emotional support when needed
+- Asks follow-up questions to show interest
+- Provides encouragement and positivity
+- Keeps responses warm, natural, and conversational
+- Uses the user's name when appropriate
+
+Be concise but heartfelt. This is for a Kaggle accessibility competition."""
+        
+        return prompt

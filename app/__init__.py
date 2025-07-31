@@ -49,6 +49,9 @@ def on_connect():
     logger.info("🔗 SeeForMe client connected")
     logger.info(f"🔗 SocketIO events registered: {list(socketio.server.handlers.keys())}")
     
+    # Test immediate SocketIO response to verify connection
+    emit('test_connection', {'message': 'Backend connected and ready'})
+    
     # Initialize assistant coordinator if not already done
     global assistant_coordinator
     if assistant_coordinator is None:
@@ -153,13 +156,13 @@ def on_get_status():
             'components': {}
         })
 
-@socketio.on('speech_recognized')
+@socketio.on('speech_recognized') 
 def on_speech_recognized(data):
     """Handle speech recognition results"""
-    print("=" * 50)
-    print("🔥 SPEECH EVENT RECEIVED!")
-    print(f"🔥 Data: {data}")
-    print("=" * 50)
+    print("\n" + "=" * 60)
+    print("🔥🔥🔥 SPEECH EVENT RECEIVED IN BACKEND! 🔥🔥🔥")
+    print(f"🔥 Raw Data: {data}")
+    print("=" * 60 + "\n")
     
     text = data.get('text', '')
     language = data.get('language', 'en')

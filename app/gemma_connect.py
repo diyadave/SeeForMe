@@ -25,7 +25,7 @@ class GemmaConnector:
         self.ollama_host = os.getenv('OLLAMA_HOST', 'localhost')
         self.ollama_port = os.getenv('OLLAMA_PORT', '11434')
         self.base_url = f"http://{self.ollama_host}:{self.ollama_port}"
-        self.model_name = "gemma2:3b"
+        self.model_name = "gemma2:2b"
         
         # Setup will happen in test_connection
         self._setup_ollama()

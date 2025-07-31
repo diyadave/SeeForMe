@@ -566,6 +566,10 @@
                     console.error('System error:', data);
                     this.announceToScreenReader(`Error: ${data.message}`);
                 });
+                
+                this.socket.on('test_connection', (data) => {
+                    console.log('🔗 Test connection received:', data);
+                });
             }
             
             initializeSpeechRecognition() {
