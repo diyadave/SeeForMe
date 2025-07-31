@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SimpleGemmaAgent:
     def __init__(self):
         self.base_url = "http://localhost:11434"
-        self.model = "gemma3n:latest"
+        self.model = "gemma2:2b"  # Use available model
         self.is_connected = False
         self.session = requests.Session()
         self.session.timeout = 3
@@ -25,50 +25,40 @@ class SimpleGemmaAgent:
         self._ensure_ollama()
         
     def _ensure_ollama(self):
-        """Ensure Ollama server is running with Gemma 3n - with persistent retry loop"""
-        print("🔍 Testing Gemma 3n connection...")
-        
-        # Keep trying until Gemma is available (like your implementation)
-        while not self.is_connected:
+        """Ensure Ollama server is running with Gemma 2b - quick connection check"""
+        try:
+            # Quick test with actual chat request 
+            response = requests.post(
+                f"{self.base_url}/api/chat",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "model": "gemma2:2b",
+                    "messages": [{"role": "user", "content": "Hello"}],
+                    "stream": False
+                },
+                timeout=5
+            )
+            
+            if response.ok:
+                result = response.json()
+                if "message" in result and "content" in result["message"]:
+                    self.is_connected = True
+                    logger.info("✅ Gemma 2b connection verified and working")
+                    return
+            
+            logger.warning("⚠️ Gemma 2b not responding properly")
+                
+        except Exception as e:
+            logger.error(f"❌ Gemma connection failed: {e}")
+            
+            # Try to start Ollama if not running
             try:
-                # Test with actual chat request (more reliable than just checking tags)
-                response = requests.post(
-                    f"{self.base_url}/api/chat",
-                    headers={"Content-Type": "application/json"},
-                    json={
-                        "model": "gemma3n:latest",
-                        "messages": [{"role": "user", "content": "Hello"}],
-                        "stream": False
-                    },
-                    timeout=120
-                )
-                
-                if response.ok:
-                    result = response.json()
-                    if "message" in result and "content" in result["message"]:
-                        self.is_connected = True
-                        logger.info("✅ Gemma 3n connection verified and working")
-                        return
-                
-                print("⏳ Gemma responded but incomplete. Retrying in 20 seconds...")
-                
-            except Exception as e:
-                print(f"⏳ Waiting for Gemma to wake up... retrying in 20 seconds ({e})")
-                
-                # Try to start Ollama in background if not running
-                try:
-                    subprocess.Popen(['ollama', 'serve'], 
-                                   stdout=subprocess.DEVNULL, 
-                                   stderr=subprocess.DEVNULL)
-                    time.sleep(5)
-                    
-                    # Try to pull model
-                    subprocess.run(['ollama', 'pull', 'gemma3n:latest'], 
-                                 timeout=60, capture_output=True)
-                except:
-                    pass
-                
-                time.sleep(20)
+                subprocess.Popen(['ollama', 'serve'], 
+                               stdout=subprocess.DEVNULL, 
+                               stderr=subprocess.DEVNULL)
+                time.sleep(3)
+            except:
+                pass
     
     def get_response(self, user_input, user_name="", emotion="neutral", context=""):
         """Get AI response from Gemma 3n with emotion and context awareness"""
