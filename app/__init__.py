@@ -47,10 +47,21 @@ def health():
 def on_connect():
     """Handle client connection"""
     logger.info("🔗 SeeForMe client connected")
-    logger.info(f"🔗 SocketIO events registered: {list(socketio.server.handlers.keys())}")
+    print(f"🔗 BACKEND: Client connected, handlers available: {list(socketio.server.handlers.keys())}")
     
     # Test immediate SocketIO response to verify connection
     emit('test_connection', {'message': 'Backend connected and ready'})
+
+@socketio.on('test_speech')
+def on_test_speech(data):
+    """Handle test speech events"""
+    print(f"🧪 BACKEND: Test speech event received: {data}")
+    logger.info(f"🧪 BACKEND: Test speech event received: {data}")
+    emit('assistant_response', {
+        'text': 'Test successful! Backend received your speech event.',
+        'emotion': 'friendly', 
+        'speak': True
+    })
     
     # Initialize assistant coordinator if not already done
     global assistant_coordinator
@@ -159,10 +170,11 @@ def on_get_status():
 @socketio.on('speech_recognized') 
 def on_speech_recognized(data):
     """Handle speech recognition results"""
-    print("\n" + "=" * 60)
+    print("\n" + "🔥" * 80)
     print("🔥🔥🔥 SPEECH EVENT RECEIVED IN BACKEND! 🔥🔥🔥")
     print(f"🔥 Raw Data: {data}")
-    print("=" * 60 + "\n")
+    print("🔥" * 80 + "\n")
+    logger.info("🔥🔥🔥 SPEECH EVENT RECEIVED IN BACKEND!")
     
     text = data.get('text', '')
     language = data.get('language', 'en')
@@ -173,12 +185,14 @@ def on_speech_recognized(data):
     
     if assistant_coordinator:
         logger.info(f"🔄 BACKEND: Sending to coordinator for processing...")
+        print(f"🔄 BACKEND: Processing speech: '{text}' -> coordinator")
         assistant_coordinator.on_speech_recognized(text, language, confidence)
     else:
         logger.error("❌ BACKEND: Assistant coordinator not available!")
-        # Fallback response if coordinator not available
+        print("❌ BACKEND: Assistant coordinator not available!")
+        # Send immediate response for testing
         emit('assistant_response', {
-            'text': f"Hello! I heard you say '{text}'. I'm SeeForMe, your AI assistant, but I'm still initializing. Please try again in a moment.",
+            'text': f"Hello! I heard you say '{text}'. I'm SeeForMe, your AI assistant working for your Kaggle competition!",
             'emotion': 'friendly',
             'speak': True
         })

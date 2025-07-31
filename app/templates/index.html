@@ -954,11 +954,22 @@
             // Test function to manually trigger speech event
             testSpeechEvent() {
                 console.log('🧪 Sending test speech event...');
+                
+                // Send test speech event first
+                this.socket.emit('test_speech', {
+                    text: 'Test speech event from frontend',
+                    language: 'en',
+                    confidence: 0.95
+                });
+                
+                // Then send actual speech recognized event
                 this.socket.emit('speech_recognized', {
                     text: 'hello this is a test message',
                     confidence: 1.0,
                     language: 'en'
                 });
+                
+                console.log('🧪 Both test events sent');
             }
         }
         
