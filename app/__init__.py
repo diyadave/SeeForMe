@@ -151,6 +151,25 @@ def on_get_status():
             'components': {}
         })
 
+@socketio.on('speech_recognized')
+def on_speech_recognized(data):
+    """Handle speech recognition results"""
+    text = data.get('text', '')
+    language = data.get('language', 'en')
+    confidence = data.get('confidence', 1.0)
+    
+    logger.info(f"🗣️ Speech received: '{text}' ({language}, {confidence:.2f})")
+    
+    if assistant_coordinator:
+        assistant_coordinator.on_speech_recognized(text, language, confidence)
+    else:
+        # Fallback response if coordinator not available
+        emit('assistant_response', {
+            'text': f"Hello! I heard you say '{text}'. I'm SeeForMe, your AI assistant, but I'm still initializing. Please try again in a moment.",
+            'emotion': 'friendly',
+            'speak': True
+        })
+
 if __name__ == '__main__':
     logger.info("🚀 Starting SeeForMe Assistant")
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False)

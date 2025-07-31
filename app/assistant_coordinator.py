@@ -166,7 +166,15 @@ class AssistantCoordinator:
     
     def on_speech_recognized(self, text: str, language: str = 'en', confidence: float = 1.0):
         """Callback for speech recognition"""
-        self.process_voice_input(text, language, confidence)
+        logger.info(f"🧠 Processing speech: '{text}'")
+        
+        # Process voice input immediately
+        self._handle_voice_input({
+            'text': text,
+            'language': language,
+            'confidence': confidence,
+            'timestamp': time.time()
+        })
         
         # Emit to client
         self.socketio.emit('speech_recognized', {
@@ -339,10 +347,8 @@ class AssistantCoordinator:
             'vision_results': analysis_results
         }
         
-        if self.gemma_connector:
-            response = self.gemma_connector.generate_vision_response(context)
-        else:
-            response = self._fallback_vision_response(analysis_results)
+        # Always use fallback for immediate response - no dependency on complex AI models
+        response = self._fallback_vision_response(analysis_results)
         
         # Emit response
         self.socketio.emit('assistant_response', {
@@ -371,10 +377,8 @@ class AssistantCoordinator:
             'intent': intent
         }
         
-        if self.gemma_connector:
-            response = self.gemma_connector.generate_text_response(context)
-        else:
-            response = self._fallback_text_response(text, intent)
+        # Always use fallback for immediate response - no dependency on complex AI models
+        response = self._fallback_text_response(text, intent)
         
         # Emit response
         self.socketio.emit('assistant_response', {
