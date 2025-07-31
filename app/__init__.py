@@ -178,6 +178,8 @@ def on_voice_input(data):
             response = f"Hello {user_name}! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally. How are you feeling today?"
         elif "scold" in user_text.lower() or "harsh" in user_text.lower():
             response = f"I'm so sorry someone was harsh with you today, {user_name}. That must have been really difficult and hurtful to experience. Remember, their words don't define your worth - you're valuable and deserving of kindness. Would you like to talk about what happened?"
+        elif "look" in user_text.lower() or "see" in user_text.lower() or "describe" in user_text.lower() or "around" in user_text.lower():
+            response = f"Let me look around and describe what I can see for you, {user_name}."
         elif "talk" in user_text.lower() or "hello" in user_text.lower():
             response = f"Hello there! Yes, I'd love to talk with you, {user_name}! I'm your emotional support companion, and I'm here to listen and chat about whatever is on your mind. How are you feeling today?"
         elif "sad" in user_text.lower() or "bad" in user_text.lower():
@@ -194,11 +196,26 @@ def on_voice_input(data):
     elif any(word in user_text.lower() for word in ["happy", "good", "great", "wonderful"]):
         detected_emotion = "happy"
     
+    # Get vision analysis if available
+    vision_analysis = None
+    try:
+        from services.vision_processor import vision_processor
+        vision_analysis = vision_processor.get_intelligent_camera_response(user_text)
+        if vision_analysis:
+            # Enhance response with vision context
+            vision_desc = vision_analysis.get('description', '')
+            if vision_desc and len(vision_desc) > 10:
+                response = f"{response} {vision_desc}"
+                print(f"👁️ VISION: {vision_analysis['analysis_type']} using {vision_analysis['camera_used']} camera")
+    except Exception as e:
+        print(f"⚠️ Vision processing error: {e}")
+    
     # Send response immediately
     emit('assistant_response', {
         'text': response,
         'emotion': detected_emotion,
         'user_emotion': detected_emotion,
+        'vision_analysis': vision_analysis,
         'speak': True
     })
     
