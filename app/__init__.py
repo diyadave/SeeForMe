@@ -150,17 +150,42 @@ def on_voice_input(data):
         if match:
             user_name = match.group(1).capitalize()
     
-    # Enhanced emotional intelligence responses
-    if user_name != "friend":
-        response = f"Hello {user_name}! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally. How are you feeling today?"
-    elif "talk" in user_text.lower() or "hello" in user_text.lower():
-        response = f"Hello there! Yes, I'd love to talk with you, {user_name}! I'm your emotional support companion, and I'm here to listen and chat about whatever is on your mind. How are you feeling today?"
-    elif "sad" in user_text.lower() or "bad" in user_text.lower():
-        response = "I'm sorry you're having a tough time. I can hear that you're going through something difficult right now. I'm here to listen and support you. You're not alone, and I care about how you're feeling."
-    elif "happy" in user_text.lower() or "good" in user_text.lower():
-        response = "That's wonderful to hear! I'm so glad you're feeling good today. Your happiness brings me joy too. What's been making you feel so positive?"
-    else:
-        response = f"I heard you say '{user_text}'. I'm your caring AI companion, always here to provide emotional support and understanding. Tell me more about what's on your mind, {user_name}."
+    # Try Gemma2:2b first, then fall back to enhanced patterns
+    response = ""
+    try:
+        import requests
+        gemma_response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "gemma2:2b",
+                "prompt": f"You are a caring AI companion for blind users. A user named {user_name} just said: \"{user_text}\". Respond with empathy and support in 2-3 sentences.",
+                "stream": False
+            },
+            timeout=3
+        )
+        if gemma_response.status_code == 200:
+            gemma_data = gemma_response.json()
+            if gemma_data.get('response'):
+                response = gemma_data['response'].strip()
+                print(f"🤖 GEMMA2:2B SUCCESS: {response[:50]}...")
+    except Exception as e:
+        print(f"⚠️ Gemma2:2b not available: {e}")
+    
+    # Enhanced pattern matching fallback (if Gemma fails)
+    if not response:
+        print("📱 USING PATTERN MATCHING")
+        if user_name != "friend":
+            response = f"Hello {user_name}! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally. How are you feeling today?"
+        elif "scold" in user_text.lower() or "harsh" in user_text.lower():
+            response = f"I'm so sorry someone was harsh with you today, {user_name}. That must have been really difficult and hurtful to experience. Remember, their words don't define your worth - you're valuable and deserving of kindness. Would you like to talk about what happened?"
+        elif "talk" in user_text.lower() or "hello" in user_text.lower():
+            response = f"Hello there! Yes, I'd love to talk with you, {user_name}! I'm your emotional support companion, and I'm here to listen and chat about whatever is on your mind. How are you feeling today?"
+        elif "sad" in user_text.lower() or "bad" in user_text.lower():
+            response = "I'm sorry you're having a tough time. I can hear that you're going through something difficult right now. I'm here to listen and support you. You're not alone, and I care about how you're feeling."
+        elif "happy" in user_text.lower() or "good" in user_text.lower():
+            response = "That's wonderful to hear! I'm so glad you're feeling good today. Your happiness brings me joy too. What's been making you feel so positive?"
+        else:
+            response = f"I heard you say '{user_text}'. I'm your caring AI companion, always here to provide emotional support and understanding. Tell me more about what's on your mind, {user_name}."
     
     # Basic emotion detection
     detected_emotion = "neutral"

@@ -1,0 +1,48 @@
+[2025-07-31 19:03:52 +0000] [6886] [INFO] Starting gunicorn 23.0.0
+[2025-07-31 19:03:52 +0000] [6886] [INFO] Listening at: http://0.0.0.0:5000 (6886)
+[2025-07-31 19:03:52 +0000] [6886] [INFO] Using worker: sync
+[2025-07-31 19:03:52 +0000] [6897] [INFO] Booting worker with pid: 6897
+2025-07-31 19:03:53,450 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+ [2025-07-31 19:03:54 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:54 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:54 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:55 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:55 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:55 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:55 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:56 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:56 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:57 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:57 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:57 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:57 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:57 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:57 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:58 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:58 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:58 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:58 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:58 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:58 +0000] [6886] [INFO] Handling signal: winch
+[2025-07-31 19:03:59 +0000] [6886] [INFO] Handling signal: winch
+2025-07-31 19:04:06,367 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+2025-07-31 19:04:06,876 - app - INFO - 📹 Camera permission: granted
+2025-07-31 19:04:11,622 - app - INFO - 🎤 Starting voice assistant
+2025-07-31 19:04:11,622 - app - INFO - 🎤 Voice assistant ready
+🎯 SPEECH: hello my name is Diya
+📱 GENERATING IMMEDIATE RESPONSE
+✅ SENT: Hello Diya! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally. How are you feeling today?
+2025-07-31 19:04:13,441 - app - INFO - ❌ SeeForMe client disconnected
+🎯 SPEECH: I wanted to talk with you I am feeling sad right now
+📱 GENERATING IMMEDIATE RESPONSE
+✅ SENT: I'm sorry you're having a tough time. I can hear that you're going through something difficult right now. I'm here to listen and support you. You're not alone, and I care about how you're feeling. What's been weighing on your mind?
+2025-07-31 19:04:33,442 - app - INFO - ❌ SeeForMe client disconnected
+Invalid session 6K0iQnEU3hDb9xurAAAC (further occurrences of this error will be logged with level INFO)
+2025-07-31 19:04:33,443 - engineio.server - ERROR - Invalid session 6K0iQnEU3hDb9xurAAAC (further occurrences of this error will be logged with level INFO)
+2025-07-31 19:04:34,722 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+2025-07-31 19:04:53,443 - app - INFO - ❌ SeeForMe client disconnected
+2025-07-31 19:05:00,178 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
