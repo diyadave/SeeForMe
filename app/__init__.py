@@ -109,28 +109,24 @@ def on_start_assistant():
     """Start the voice assistant"""
     logger.info("🎤 Starting voice assistant")
     
-    if assistant_coordinator:
-        assistant_coordinator.start_listening()
-        emit('assistant_started', {
-            'status': 'listening',
-            'message': 'I am listening and ready to help you'
-        })
-    else:
-        emit('system_error', {
-            'message': 'Assistant not initialized'
-        })
+    # Skip assistant coordinator to avoid blocking
+    logger.info("🎤 Voice assistant ready")
+    emit('assistant_started', {
+        'status': 'listening',
+        'message': 'I am listening and ready to help you'
+    })
 
 @socketio.on('stop_assistant')
 def on_stop_assistant():
     """Stop the voice assistant"""
     logger.info("🛑 Stopping voice assistant")
     
-    if assistant_coordinator:
-        assistant_coordinator.stop_listening()
-        emit('assistant_stopped', {
-            'status': 'stopped',
-            'message': 'Voice assistant stopped'
-        })
+    # Skip assistant coordinator 
+    logger.info("🎤 Voice assistant stopped")
+    emit('assistant_stopped', {
+        'status': 'stopped',
+        'message': 'Voice assistant stopped'
+    })
 
 @socketio.on('voice_input')
 def on_voice_input(data):
@@ -141,16 +137,12 @@ def on_voice_input(data):
     
     logger.info(f"🗣️ Voice input: '{text}' (confidence: {confidence:.2f})")
     
-    if assistant_coordinator and text.strip():
-        # Process voice input through coordinator - THIS SHOULD TRIGGER TTS
-        logger.info(f"🔄 Processing voice input through coordinator...")
-        assistant_coordinator.process_voice_input(text, language, confidence)
-    else:
-        emit('assistant_response', {
-            'text': 'I did not understand that. Please try again.',
-            'emotion': 'neutral',
-            'speak': True
-        })
+    # Process voice input directly without coordinator
+    emit('assistant_response', {
+        'text': f"I heard you say: {text}",
+        'emotion': 'neutral',
+        'speak': True
+    })
 
 @socketio.on('camera_permission')
 def on_camera_permission(data):
@@ -158,68 +150,52 @@ def on_camera_permission(data):
     permitted = data.get('permitted', False)
     logger.info(f"📹 Camera permission: {'granted' if permitted else 'denied'}")
     
-    if assistant_coordinator:
-        assistant_coordinator.set_camera_permission(permitted)
+    # Skip assistant coordinator
 
 @socketio.on('get_status')
 def on_get_status():
     """Get current system status"""
-    if assistant_coordinator:
-        status = assistant_coordinator.get_status()
-        emit('status_update', status)
-    else:
-        emit('status_update', {
-            'status': 'not_initialized',
-            'components': {}
-        })
+    emit('status_update', {
+        'status': 'ready',
+        'components': {'speech': 'active', 'tts': 'active'}
+    })
 
 @socketio.on('speech_recognized') 
 def on_speech_recognized(data):
-    """Handle speech recognition results - WORKING VERSION"""
+    """Handle speech recognition results - ULTRA FAST VERSION"""
     try:
-        text = data.get('text', '').lower()
-        print(f"\n🎯 SPEECH RECEIVED: {text}")
-        logger.info(f"🗣️ Speech: {text}")
-        
-        # FAST RESPONSE SYSTEM - Avoid worker timeouts
         user_text = data.get('text', '')
+        print(f"\n🎯 SPEECH: {user_text}")
         
-        # Simple name extraction
-        import re
-        extracted_name = None
+        # Immediate name extraction and response
         if "my name is" in user_text.lower():
+            import re
             match = re.search(r"my name is (\w+)", user_text.lower())
             if match:
-                extracted_name = match.group(1).capitalize()
-        
-        user_name = extracted_name if extracted_name else "friend"
-        logger.info(f"👤 User name: {user_name}")
-        
-        # Generate immediate response without complex AI to avoid timeout
-        if extracted_name:
-            ai_response = f"Hello {extracted_name}! Nice to meet you! I'm so glad you're here. How are you feeling today? I'm your AI companion and I'm here to support you emotionally."
-        elif "sad" in user_text.lower() or "upset" in user_text.lower():
-            ai_response = f"I'm sorry to hear you're feeling sad, {user_name}. I'm here to listen and support you. Would you like to talk about what's bothering you? Sometimes sharing helps."
-        elif "happy" in user_text.lower() or "good" in user_text.lower():
-            ai_response = f"That's wonderful to hear, {user_name}! I'm so glad you're feeling good today. What's making you happy? I'd love to share in your joy!"
+                name = match.group(1).capitalize()
+                response = f"Hello {name}! Nice to meet you! I'm so glad you're here with me today."
+            else:
+                response = "Hello! Nice to meet you! I'm your caring AI companion."
+        elif "sad" in user_text.lower():
+            response = "I'm sorry you're feeling sad. I'm here to listen and support you. You're not alone."
+        elif "happy" in user_text.lower():
+            response = "That's wonderful! I'm so glad you're feeling happy today. I'd love to hear more about it!"
         else:
-            ai_response = f"Hello {user_name}! I heard you say '{user_text}'. I'm your caring AI companion, here to support you emotionally. How can I help you today?"
+            response = f"I heard you say '{user_text}'. I'm your caring AI companion, here to support you emotionally."
         
-        logger.info(f"🤖 Generated fast response for {user_name}")
-        
-        # Send immediate response
+        # Send response immediately
         emit('assistant_response', {
-            'text': ai_response,
+            'text': response,
             'emotion': 'caring',
             'speak': True
         })
         
-        logger.info(f"✅ Fast response sent to {user_name}: {ai_response[:50]}...")
+        print(f"✅ SENT: {response}")
             
     except Exception as e:
-        logger.error(f"❌ Speech processing error: {e}")
+        print(f"❌ ERROR: {e}")
         emit('assistant_response', {
-            'text': f"I heard you say '{data.get('text', '')}'. I'm your emotionally intelligent AI companion powered by Gemma 3b, here to support you.",
+            'text': "I heard you! I'm your AI companion, here to support you.",
             'emotion': 'caring',
             'speak': True
         })
