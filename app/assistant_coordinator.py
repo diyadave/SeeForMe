@@ -423,29 +423,32 @@ class AssistantCoordinator:
         return ' '.join(responses)
     
     def _fallback_text_response(self, text: str, intent: str) -> str:
-        """Fallback text response when Gemma is unavailable"""
+        """Provide immediate, empathetic responses"""
+        text_lower = text.lower()
         name = self.user_context.get('name', 'friend')
         
-        responses = {
-            'general_conversation': [
-                f"Hello {name}! I'm here to help you understand your surroundings.",
-                f"I'm listening, {name}. How can I assist you today?",
-                f"Hi {name}! I'm ready to describe what I see or help with anything you need."
-            ],
-            'scene_analysis': [
-                "I'm ready to describe your surroundings. Let me analyze what's around you.",
-                "I'll look around and tell you what I can see in your environment.",
-                "Let me check what's in your surroundings and describe it for you."
-            ],
-            'emotion_analysis': [
-                "I'm checking your expression and mood. Give me a moment to analyze.",
-                "Let me look at your face and tell you about your current expression.",
-                "I'll analyze your facial expression to understand how you're feeling."
-            ]
-        }
+        # Personal greeting responses
+        if any(word in text_lower for word in ['hello', 'hi', 'hey']) and 'name' in text_lower:
+            if 'diya' in text_lower:
+                self.user_context['name'] = 'Diya'
+                return "Hello Diya! It's wonderful to meet you. I'm SeeForMe, your AI companion. I can help you understand your surroundings, analyze your emotions, and provide support whenever you need it. I'm here for you, Diya."
+            else:
+                return f"Hello {name}! I'm SeeForMe, your AI assistant. I'm here to help you with anything you need."
         
-        import random
-        return random.choice(responses.get(intent, responses['general_conversation']))
+        # Emotional support responses
+        if any(word in text_lower for word in ['sad', 'feeling sad', 'upset', 'down', 'depressed']):
+            return f"I can hear in your voice that you're going through a difficult time, {name}. I'm truly sorry you're feeling sad right now. I want you to know that I'm here to listen and support you. You're not alone. Would you like to tell me more about what's troubling you, or would you prefer if I help you with something to lift your spirits?"
+        
+        # How do I look requests
+        if 'how do i look' in text_lower or 'my face' in text_lower or 'my expression' in text_lower:
+            return f"I'd love to help you understand how you look and feel, {name}. Let me switch to the front camera to analyze your expression and mood. This will help me give you better support."
+        
+        # What do you see requests
+        if any(phrase in text_lower for phrase in ['what do you see', 'what\'s there', 'look around', 'surroundings']):
+            return f"I'm ready to be your eyes, {name}. Let me switch to the back camera and describe everything I can see around you."
+        
+        # General conversation
+        return f"I hear you, {name}. I'm listening carefully to everything you're telling me. How can I best help you right now? I can describe your surroundings, check your expression, or just talk with you about whatever is on your mind."
     
     def _extract_person_region(self, frame, bbox):
         """Extract person region from frame for emotion analysis"""

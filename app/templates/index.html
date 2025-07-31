@@ -591,7 +591,8 @@
                             const confidence = result[0].confidence || 1.0;
                             
                             console.log('🗣️ Speech recognized:', text);
-                            this.socket.emit('voice_input', {
+                            // Send to backend for processing
+                            this.socket.emit('speech_recognized', {
                                 text: text,
                                 confidence: confidence,
                                 language: 'en'
