@@ -1,0 +1,131 @@
+I want to build a fully offline smart assistant app for blind users called SeeForMe. This app should launch with a full-screen start button so the user can tap anywhere to begin. Once started, the assistant becomes active and displays:
+
+A mini floating frame showing the front camera feed
+
+An animated voice assistant avatar, like a robot face or Siri-style wave animation that responds visually while listening or speaking
+
+🧠 Features I want:
+
+Voice-first interaction:
+
+Use Vosk for offline voice recognition
+
+Auto-detect language between English, Hindi, Gujarati
+
+While user is speaking, show wave animation (like Siri), and stop when assistant replies
+
+Emotion-aware conversations:
+
+Use ONNX emotion detection model on front camera
+
+If user is talking about themselves or sharing feelings (e.g. "I'm feeling sad" or "I need help"), the front camera should be used
+
+Assistant (powered by Gemma 3n via local Ollama) should respond empathetically with emotional awareness
+
+Scene and object description:
+
+If user says things like: “what’s there?”, “where am I?”, “what is in front of me?” or “who is there?”, it should switch to the back camera
+
+Use YOLOv8n to detect objects
+
+Use Places365 to describe the environment (e.g., park, street, kitchen)
+
+If someone is standing in front of the user, describe them like:
+
+“There’s a person standing in front of you, and they look happy.”
+
+Emotion of others should be detected from their face using emotion model (if visible)
+
+Weather and time-of-day awareness:
+
+If the user says: “how’s the weather?” or “what’s the view like?”, describe the lighting and time-of-day (e.g., “The sun is rising”, “It’s evening and the sky is orange”)
+
+If possible, use computer vision cues from the camera to estimate day vs night
+
+Offline functionality:
+
+Entire app should run offline
+
+Only use gTTS online fallback for Hindi or Gujarati speech output
+
+Default English TTS should use pyttsx3 (offline)
+
+UI Requirements:
+
+Built using Flask + SocketIO (or Streamlit if easier for prototyping)
+
+Beautiful voice assistant UI with:
+
+Purple/blue theme
+
+High contrast for accessibility
+
+Large buttons
+
+Voice assistant avatar + animated wave effect while speaking/listening
+
+Camera preview shown in a floating mini-frame (side or corner)
+
+Screen-reader friendly and keyboard accessible
+
+Modular Code Structure:
+Please divide the code in this modular folder format:
+
+markdown
+Copy
+Edit
+- main.py
+- app/
+  - assistant_coordinator.py
+  - camera_switcher.py
+  - gemma_connect.py
+  - emotion_detector.py
+  - scene_detector.py
+  - tts_handler.py
+  - speech_handler.py
+  - name_extractor.py
+  - templates/ (for HTML UI)
+  - static/ (for CSS, JS, robot/wave animation)
+Scene and Emotion Fusion:
+
+Combine results from object detection (YOLOv8n), scene classification (Places365), and facial emotion (ONNX)
+
+Return beautifully described text like:
+
+“You are at a park. I see a dog, a bench, and two people. One of them is smiling at you.”
+
+Conversation flow:
+
+Voice input → Vosk → Analyze text
+
+If about self → activate front camera + emotion detection
+
+If about environment → activate back camera + object + scene + person emotion
+
+All results → Combined context → Send to Gemma → TTS
+
+Important:
+
+The assistant should feel like a real friend
+
+All actions must be triggered by voice commands only — no clicks after starting
+
+Must run locally on desktop/laptop with Python
+
+✨ Give me the full working project code step-by-step, starting with:
+
+Flask app + main UI with animated assistant + start button
+
+Modular camera handling (front/back)
+
+Voice recognition module (vosk)
+
+Emotion detection
+
+Object detection + scene recognition
+
+Integration with Gemma
+
+TTS for multi-language
+
+Assistant coordinator logic
