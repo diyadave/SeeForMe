@@ -522,7 +522,13 @@
             }
             
             initializeSocket() {
-                this.socket = io();
+                // Force polling transport to avoid WebSocket timeout issues
+                this.socket = io({
+                    transports: ['polling'],
+                    timeout: 20000,
+                    forceNew: true,
+                    upgrade: false
+                });
                 
                 this.socket.on('connect', () => {
                     console.log('✅ Connected to SeeForMe backend');

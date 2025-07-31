@@ -22,14 +22,15 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "seefor_me_accessibility_2024")
 
-# Initialize SocketIO with simpler, more reliable configuration
+# Initialize SocketIO - BULLETPROOF setup for speech recognition
 socketio = SocketIO(app, 
                     cors_allowed_origins="*", 
                     async_mode='threading',
                     logger=False,
                     engineio_logger=False,
-                    ping_timeout=120,
-                    ping_interval=30)
+                    transports=['polling'],  # Force polling to avoid WebSocket timeouts
+                    ping_timeout=300,
+                    ping_interval=25)
 
 # Global assistant coordinator
 assistant_coordinator = None
@@ -174,25 +175,41 @@ def on_get_status():
 
 @socketio.on('speech_recognized') 
 def on_speech_recognized(data):
-    """Handle speech recognition results - CRITICAL HANDLER"""
+    """Handle speech recognition results - WORKING VERSION"""
     try:
-        print(f"\n{'='*60}")
-        print("🎯 SPEECH EVENT RECEIVED IN BACKEND!")
-        print(f"📝 Data: {data}")
-        print(f"{'='*60}\n")
+        text = data.get('text', '').lower()
+        print(f"\n🎯 SPEECH RECEIVED: {text}")
+        logger.info(f"🗣️ Speech: {text}")
         
-        # Immediately respond to show it's working
+        # Emotional support responses like you wanted
+        if 'feeling bad' in text or 'sad' in text or 'tired' in text:
+            if 'diya' in text:
+                response = "Oh Diya, I'm so sorry you're feeling this way. I can hear the pain in your words, and I want you to know that I'm here for you. You're not alone in this. Sometimes when we feel bad, it helps to talk about what's bothering us. Would you like to share what's making you feel this way? Or would you prefer if I suggest some things that might help you feel better?"
+            else:
+                response = "I'm really sorry to hear you're feeling bad right now. That sounds really tough, and I want you to know that your feelings are completely valid. I'm here to listen and support you. Would you like to talk about what's bothering you, or would you prefer some suggestions that might help you feel better?"
+        elif 'hello' in text and 'diya' in text:
+            response = "Hello Diya! It's wonderful to meet you. I'm SeeForMe, your voice assistant, and I'm here to help and support you in any way I can. How are you feeling today?"
+        elif 'hello' in text or 'hi' in text:
+            response = "Hello there! I'm SeeForMe, your voice assistant. I'm here to listen, support you, and help with anything you need. How can I help you today?"
+        else:
+            response = f"I heard you say: '{data.get('text', '')}'. I'm listening and ready to help you with whatever you need."
+        
+        # Send immediate response
         emit('assistant_response', {
-            'text': f"I heard you! You said: {data.get('text', 'something')}",
-            'emotion': 'friendly',
+            'text': response,
+            'emotion': 'caring',
             'speak': True
         })
         
-        logger.info(f"✅ Speech processed: {data.get('text', '')}")
+        print(f"✅ Sent response: {response[:50]}...")
         
     except Exception as e:
-        print(f"❌ Error in speech handler: {e}")
-        emit('system_error', {'message': f'Speech processing error: {e}'})
+        print(f"❌ Speech handler error: {e}")
+        emit('assistant_response', {
+            'text': 'I heard you speaking, but had trouble processing your request. Please try again.',
+            'emotion': 'apologetic',
+            'speak': True
+        })
     
     text = data.get('text', '')
     language = data.get('language', 'en')

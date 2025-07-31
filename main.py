@@ -1,4 +1,4 @@
-from app_simple import app, socketio
+from app import app, socketio
 import logging
 
 logging.basicConfig(level=logging.INFO)
