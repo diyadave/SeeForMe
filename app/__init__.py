@@ -181,25 +181,55 @@ def on_speech_recognized(data):
         print(f"\n🎯 SPEECH RECEIVED: {text}")
         logger.info(f"🗣️ Speech: {text}")
         
-        # FAST RESPONSE with Gemma 3b - No threading to avoid timeout
+        # INTEGRATED EMOTION DETECTION + CONVERSATIONAL AI
         from simple_gemma_agent import simple_agent
+        from services.simple_vision import SimpleVision
         
         # Extract user info
         user_text = data.get('text', '')
         user_name = "friend"  # Will be extracted properly later
         
-        # Get AI response from Gemma 3b
-        logger.info(f"🤖 Getting Gemma 3b response...")
-        ai_response = simple_agent.get_response(user_text, user_name, 'neutral')
+        # Detect emotion from camera feed
+        try:
+            vision = SimpleVision()
+            emotion_result = vision.detect_emotion()
+            detected_emotion = emotion_result.get('emotion', 'neutral')
+            confidence = emotion_result.get('confidence', 0.0)
+            
+            logger.info(f"😊 Detected emotion: {detected_emotion} ({confidence:.2f})")
+            
+            # Also get scene context for better responses
+            scene_info = vision.analyze_scene()
+            context = scene_info.get('description', '')
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Vision processing failed: {e}")
+            detected_emotion = 'neutral'
+            context = ''
         
-        # Send response immediately
+        # Get conversational AI response from Gemma 3b with emotion awareness
+        logger.info(f"🤖 Getting emotionally aware Gemma 3b response...")
+        ai_response = simple_agent.get_response(
+            user_text, 
+            user_name, 
+            detected_emotion, 
+            context
+        )
+        
+        # Send response with detected emotion
         emit('assistant_response', {
             'text': ai_response,
-            'emotion': 'caring',
+            'emotion': detected_emotion,
             'speak': True
         })
         
-        logger.info(f"✅ Gemma 3b response sent: {ai_response[:50]}...")
+        # Also send emotion detection result to frontend
+        emit('emotion_detected', {
+            'emotion': detected_emotion,
+            'confidence': confidence
+        })
+        
+        logger.info(f"✅ Emotion-aware response sent: {ai_response[:50]}... (emotion: {detected_emotion})")
             
     except Exception as e:
         logger.error(f"❌ Speech processing error: {e}")

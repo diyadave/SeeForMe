@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SimpleGemmaAgent:
     def __init__(self):
         self.base_url = "http://localhost:11434"
-        self.model = "gemma:3b"
+        self.model = "gemma2:2b"
         self.is_connected = False
         self.session = requests.Session()
         self.session.timeout = 3
@@ -31,9 +31,9 @@ class SimpleGemmaAgent:
             response = self.session.get(f"{self.base_url}/api/tags", timeout=2)
             if response.status_code == 200:
                 models = response.json().get('models', [])
-                if any('gemma:3b' in str(model) for model in models):
+                if any('gemma2:2b' in str(model) for model in models):
                     self.is_connected = True
-                    logger.info("✅ Gemma 3b already running")
+                    logger.info("✅ Gemma2:2b already running")
                     return
         except:
             pass
@@ -46,34 +46,54 @@ class SimpleGemmaAgent:
                            stderr=subprocess.DEVNULL)
             time.sleep(3)
             
-            # Pull Gemma 3b model
-            subprocess.run(['ollama', 'pull', 'gemma:3b'], 
-                         timeout=60, capture_output=True)
+            # Pull Gemma 2b model (available and working)
+            result = subprocess.run(['ollama', 'pull', 'gemma2:2b'], 
+                                  timeout=60, capture_output=True, text=True)
+            logger.info(f"📥 Ollama pull result: {result.returncode}")
             
             # Test connection again
             response = self.session.get(f"{self.base_url}/api/tags", timeout=2)
             if response.status_code == 200:
                 models = response.json().get('models', [])
-                if any('gemma:3b' in str(model) for model in models):
+                if any('gemma2:2b' in str(model) for model in models):
                     self.is_connected = True
-                    logger.info("✅ Gemma 3b connected and ready")
+                    logger.info("✅ Gemma2:2b connected and ready")
                     
         except Exception as e:
             logger.warning(f"⚠️ Ollama setup failed: {e}")
     
-    def get_response(self, user_input, user_name="", emotion="neutral"):
-        """Get fast AI response from Gemma 3b"""
+    def get_response(self, user_input, user_name="", emotion="neutral", context=""):
+        """Get fast AI response from Gemma2:2b with emotion and context awareness"""
+        # Force connection check every time to ensure we're really connected
+        self._ensure_ollama()
+        
         if not self.is_connected:
+            logger.warning("⚠️ Ollama not connected, using fallback response")
             return f"Hello {user_name}! I heard you say '{user_input}'. I'm your AI companion, here to support you emotionally."
             
         try:
-            # Craft empathetic prompt for emotional intelligence
-            prompt = f"""You are an emotionally intelligent AI companion for a visually impaired person named {user_name}. 
-They just said: "{user_input}"
-Their current emotion seems: {emotion}
+            # Craft deeply empathetic and conversational prompt
+            emotion_context = ""
+            if emotion != "neutral":
+                emotion_context = f"I can see you're feeling {emotion} right now. "
+                
+            visual_context = ""
+            if context:
+                visual_context = f"From what I can see around you: {context}. "
+            
+            prompt = f"""You are a caring, emotionally intelligent AI friend for a visually impaired person named {user_name}. 
 
-Respond with warmth, empathy, and emotional intelligence. Keep it conversational and supportive, like a caring friend.
-Be helpful but not overly clinical. Show you understand their feelings."""
+{emotion_context}{visual_context}They just said: "{user_input}"
+
+Respond as their supportive friend would - warm, conversational, and emotionally aware. 
+- If they seem sad/upset, offer comfort and understanding
+- If they're happy, share in their joy  
+- Be genuinely interested in them as a person
+- Ask follow-up questions to keep the conversation going
+- Keep responses natural and friendly, not robotic
+- Remember details they share about themselves
+
+Make this feel like talking to a real friend who truly cares."""
 
             payload = {
                 "model": self.model,

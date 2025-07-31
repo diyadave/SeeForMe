@@ -144,9 +144,41 @@ class SimpleVision:
         
         return objects[:3]  # Limit for speed
     
+    def detect_emotion(self) -> Dict:
+        """Detect emotion from camera feed"""
+        self.start_camera()  # Ensure camera is running
+        
+        # Capture and analyze current frame
+        analysis = self.capture_and_analyze()
+        if not analysis:
+            return {'emotion': 'neutral', 'confidence': 0.0}
+        
+        # Try face detection for emotion
+        face_result = self.detect_faces_simple()
+        if face_result:
+            return {
+                'emotion': face_result.get('emotion', 'neutral'),
+                'confidence': face_result.get('confidence', 0.0)
+            }
+        
+        return {'emotion': 'neutral', 'confidence': 0.0}
+    
+    def analyze_scene(self) -> Dict:
+        """Analyze scene from camera feed"""
+        self.start_camera()  # Ensure camera is running
+        
+        analysis = self.capture_and_analyze()
+        if not analysis:
+            return {'description': 'unknown environment'}
+        
+        return {
+            'description': analysis.get('description', 'an indoor space'),
+            'objects': analysis.get('objects', [])
+        }
+    
     def detect_faces_simple(self) -> Optional[Dict]:
         """Simple face detection for emotion analysis"""
-        if not self.last_frame is not None:
+        if self.last_frame is None:
             return None
         
         try:
