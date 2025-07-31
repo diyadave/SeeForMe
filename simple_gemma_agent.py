@@ -25,54 +25,60 @@ class SimpleGemmaAgent:
         self._ensure_ollama()
         
     def _ensure_ollama(self):
-        """Ensure Ollama server is running with Gemma 3b"""
-        try:
-            # Check if already running
-            response = self.session.get(f"{self.base_url}/api/tags", timeout=2)
-            if response.status_code == 200:
-                models = response.json().get('models', [])
-                if any('gemma3n' in str(model) for model in models):
-                    self.is_connected = True
-                    logger.info("✅ gemma3n:latest already running")
-                    return
-        except:
-            pass
-            
-        # Try to start Ollama and pull model
-        try:
-            # Start ollama serve in background
-            subprocess.Popen(['ollama', 'serve'], 
-                           stdout=subprocess.DEVNULL, 
-                           stderr=subprocess.DEVNULL)
-            time.sleep(3)
-            
-            # Pull gemma3n:latest model (user requirement)
-            result = subprocess.run(['ollama', 'pull', 'gemma3n:latest'], 
-                                  timeout=120, capture_output=True, text=True)
-            logger.info(f"📥 Ollama pull result: {result.returncode}")
-            
-            # Test connection again
-            response = self.session.get(f"{self.base_url}/api/tags", timeout=2)
-            if response.status_code == 200:
-                models = response.json().get('models', [])
-                if any('gemma3n' in str(model) for model in models):
-                    self.is_connected = True
-                    logger.info("✅ gemma3n:latest connected and ready")
+        """Ensure Ollama server is running with Gemma 3n - with persistent retry loop"""
+        print("🔍 Testing Gemma 3n connection...")
+        
+        # Keep trying until Gemma is available (like your implementation)
+        while not self.is_connected:
+            try:
+                # Test with actual chat request (more reliable than just checking tags)
+                response = requests.post(
+                    f"{self.base_url}/api/chat",
+                    headers={"Content-Type": "application/json"},
+                    json={
+                        "model": "gemma3n:latest",
+                        "messages": [{"role": "user", "content": "Hello"}],
+                        "stream": False
+                    },
+                    timeout=120
+                )
+                
+                if response.ok:
+                    result = response.json()
+                    if "message" in result and "content" in result["message"]:
+                        self.is_connected = True
+                        logger.info("✅ Gemma 3n connection verified and working")
+                        return
+                
+                print("⏳ Gemma responded but incomplete. Retrying in 20 seconds...")
+                
+            except Exception as e:
+                print(f"⏳ Waiting for Gemma to wake up... retrying in 20 seconds ({e})")
+                
+                # Try to start Ollama in background if not running
+                try:
+                    subprocess.Popen(['ollama', 'serve'], 
+                                   stdout=subprocess.DEVNULL, 
+                                   stderr=subprocess.DEVNULL)
+                    time.sleep(5)
                     
-        except Exception as e:
-            logger.warning(f"⚠️ Ollama setup failed: {e}")
+                    # Try to pull model
+                    subprocess.run(['ollama', 'pull', 'gemma3n:latest'], 
+                                 timeout=60, capture_output=True)
+                except:
+                    pass
+                
+                time.sleep(20)
     
     def get_response(self, user_input, user_name="", emotion="neutral", context=""):
-        """Get fast AI response from Gemma2:2b with emotion and context awareness"""
-        # Ensure connection but don't block on it
-        try:
+        """Get AI response from Gemma 3n with emotion and context awareness"""
+        # Ensure connection with persistent retry (like your code)
+        if not self.is_connected:
             self._ensure_ollama()
-        except:
-            pass
         
         if not self.is_connected:
-            logger.warning("⚠️ Ollama not connected, using fallback response")
-            # Special name extraction fallback
+            logger.warning("⚠️ Gemma 3n not available, using fallback response")
+            # Enhanced fallback for emotional support
             if "my name is" in user_input.lower():
                 import re
                 match = re.search(r"my name is (\w+)", user_input.lower())

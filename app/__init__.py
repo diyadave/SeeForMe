@@ -179,29 +179,42 @@ def on_speech_recognized(data):
         if match:
             user_name = match.group(1).capitalize()
     
-    # Try Gemma3n first, fallback to pattern matching for reliability
+    # Try Gemma3n in background thread to avoid blocking, fallback immediately if not ready
     response = ""
+    gemma_ready = False
+    
     try:
         from simple_gemma_agent import simple_agent
-        response = simple_agent.get_response(user_text, user_name, "caring", "conversation")
-        print(f"🤖 GEMMA3N SUCCESS: {response}")
-    except Exception as e:
-        print(f"❌ GEMMA3N NOT AVAILABLE: {e}")
-        print("📱 USING PATTERN MATCHING FALLBACK")
-        
-        # Enhanced pattern matching with proper name extraction
-        if user_name != "friend":
-            response = f"Hello {user_name}! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally."
-        elif "scold" in user_text.lower() or "harsh" in user_text.lower():
-            response = "I understand someone was harsh with you. That must have been difficult. Remember, other people's words don't define your worth. You're valuable and deserving of kindness."
-        elif "bad" in user_text.lower() or "sad" in user_text.lower():
-            response = "I'm sorry you're having a tough time. I'm here to listen and support you. You're not alone, and I care about how you're feeling."
-        elif "thank" in user_text.lower():
-            response = "You're so welcome! I'm glad I could help. I'm always here when you need emotional support or just someone to talk to."
-        elif "happy" in user_text.lower() or "good" in user_text.lower():
-            response = "That's wonderful! I'm so glad you're feeling good today. It makes me happy to hear positive things from you."
+        # Quick check if Gemma is already connected (don't wait for connection)
+        if simple_agent.is_connected:
+            response = simple_agent.get_response(user_text, user_name, "caring", "conversation")
+            gemma_ready = True
+            print(f"🤖 GEMMA3N SUCCESS: {response}")
         else:
-            response = f"I heard you say '{user_text}'. I'm your caring AI companion, always here to provide emotional support and understanding."
+            print("⏳ GEMMA3N CONNECTING IN BACKGROUND")
+            # Start connection in background thread
+            threading.Thread(target=simple_agent._ensure_ollama, daemon=True).start()
+    except Exception as e:
+        print(f"❌ GEMMA3N ERROR: {e}")
+    
+    if not gemma_ready:
+        print("📱 USING ENHANCED PATTERN MATCHING")
+        
+        # Enhanced pattern matching with emotional intelligence (while Gemma3n loads)
+        if user_name != "friend":
+            response = f"Hello {user_name}! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally. How are you feeling today?"
+        elif "scold" in user_text.lower() or "harsh" in user_text.lower():
+            response = "I understand someone was harsh with you. That must have been really difficult to experience. Remember, other people's words don't define your worth. You're valuable and deserving of kindness. Would you like to talk about what happened?"
+        elif "bad" in user_text.lower() or "sad" in user_text.lower():
+            response = "I'm sorry you're having a tough time. I can hear that you're going through something difficult right now. I'm here to listen and support you. You're not alone, and I care about how you're feeling. What's been weighing on your mind?"
+        elif "thank" in user_text.lower():
+            response = "You're so welcome! I'm genuinely glad I could help and support you. It means a lot to me that you felt heard. I'm always here when you need emotional support or just someone to talk to."
+        elif "happy" in user_text.lower() or "good" in user_text.lower():
+            response = "That's wonderful to hear! I'm so glad you're feeling good today. Your happiness brings me joy too. What's been making you feel so positive?"
+        elif "help" in user_text.lower() or "support" in user_text.lower():
+            response = f"Of course I'm here to help you, {user_name}! I'm your caring AI companion, and supporting you is what I'm here for. What kind of support do you need right now?"
+        else:
+            response = f"I heard you say '{user_text}'. I'm your caring AI companion, always here to provide emotional support and understanding. Tell me more about what's on your mind, {user_name}."
     
     # Send response immediately
     emit('assistant_response', {
