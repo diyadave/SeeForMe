@@ -167,29 +167,41 @@ def on_speech_recognized(data):
     user_text = data.get('text', '')
     print(f"🎯 SPEECH: {user_text}")
     
-    # Generate response instantly
-    text_lower = user_text.lower()
-    
-    if "my name is" in text_lower:
-        import re
-        match = re.search(r"my name is (\w+)", text_lower)
+    # Extract name properly first
+    import re
+    user_name = "friend"
+    if "my name is" in user_text.lower():
+        match = re.search(r"my name is\s+(\w+)", user_text.lower())
         if match:
-            name = match.group(1).capitalize()
-            response = f"Hello {name}! Nice to meet you! I'm so glad you're here."
+            user_name = match.group(1).capitalize()
+    elif "call me" in user_text.lower():
+        match = re.search(r"call me\s+(\w+)", user_text.lower())
+        if match:
+            user_name = match.group(1).capitalize()
+    
+    # Try Gemma3n first, fallback to pattern matching for reliability
+    response = ""
+    try:
+        from simple_gemma_agent import simple_agent
+        response = simple_agent.get_response(user_text, user_name, "caring", "conversation")
+        print(f"🤖 GEMMA3N SUCCESS: {response}")
+    except Exception as e:
+        print(f"❌ GEMMA3N NOT AVAILABLE: {e}")
+        print("📱 USING PATTERN MATCHING FALLBACK")
+        
+        # Enhanced pattern matching with proper name extraction
+        if user_name != "friend":
+            response = f"Hello {user_name}! Nice to meet you! I'm your caring AI companion and I'm here to support you emotionally."
+        elif "scold" in user_text.lower() or "harsh" in user_text.lower():
+            response = "I understand someone was harsh with you. That must have been difficult. Remember, other people's words don't define your worth. You're valuable and deserving of kindness."
+        elif "bad" in user_text.lower() or "sad" in user_text.lower():
+            response = "I'm sorry you're having a tough time. I'm here to listen and support you. You're not alone, and I care about how you're feeling."
+        elif "thank" in user_text.lower():
+            response = "You're so welcome! I'm glad I could help. I'm always here when you need emotional support or just someone to talk to."
+        elif "happy" in user_text.lower() or "good" in user_text.lower():
+            response = "That's wonderful! I'm so glad you're feeling good today. It makes me happy to hear positive things from you."
         else:
-            response = "Hello! Nice to meet you! I'm your caring AI companion."
-    
-    elif "bad" in text_lower or "sad" in text_lower:
-        response = "I'm sorry you're having a tough time. I'm here to listen and support you. You're not alone."
-    
-    elif "scold" in text_lower or "someone" in text_lower:
-        response = "I understand someone was harsh with you. That must have been difficult. Remember, other people's words don't define your worth. You're valuable and deserving of kindness."
-    
-    elif "happy" in text_lower or "good" in text_lower:
-        response = "That's wonderful! I'm so glad you're feeling good today."
-    
-    else:
-        response = f"I heard you. I'm your caring AI companion, here to support you emotionally."
+            response = f"I heard you say '{user_text}'. I'm your caring AI companion, always here to provide emotional support and understanding."
     
     # Send response immediately
     emit('assistant_response', {

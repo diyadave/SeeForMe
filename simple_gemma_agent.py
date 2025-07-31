@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SimpleGemmaAgent:
     def __init__(self):
         self.base_url = "http://localhost:11434"
-        self.model = "gemma2:2b"
+        self.model = "gemma3n:latest"
         self.is_connected = False
         self.session = requests.Session()
         self.session.timeout = 3
@@ -31,9 +31,9 @@ class SimpleGemmaAgent:
             response = self.session.get(f"{self.base_url}/api/tags", timeout=2)
             if response.status_code == 200:
                 models = response.json().get('models', [])
-                if any('gemma2:2b' in str(model) for model in models):
+                if any('gemma3n' in str(model) for model in models):
                     self.is_connected = True
-                    logger.info("✅ Gemma2:2b already running")
+                    logger.info("✅ gemma3n:latest already running")
                     return
         except:
             pass
@@ -46,18 +46,18 @@ class SimpleGemmaAgent:
                            stderr=subprocess.DEVNULL)
             time.sleep(3)
             
-            # Pull Gemma2:2b model (working model)
-            result = subprocess.run(['ollama', 'pull', 'gemma2:2b'], 
-                                  timeout=60, capture_output=True, text=True)
+            # Pull gemma3n:latest model (user requirement)
+            result = subprocess.run(['ollama', 'pull', 'gemma3n:latest'], 
+                                  timeout=120, capture_output=True, text=True)
             logger.info(f"📥 Ollama pull result: {result.returncode}")
             
             # Test connection again
             response = self.session.get(f"{self.base_url}/api/tags", timeout=2)
             if response.status_code == 200:
                 models = response.json().get('models', [])
-                if any('gemma2:2b' in str(model) for model in models):
+                if any('gemma3n' in str(model) for model in models):
                     self.is_connected = True
-                    logger.info("✅ Gemma2:2b connected and ready")
+                    logger.info("✅ gemma3n:latest connected and ready")
                     
         except Exception as e:
             logger.warning(f"⚠️ Ollama setup failed: {e}")
