@@ -27,6 +27,9 @@ class GemmaConnector:
         self.base_url = f"http://{self.ollama_host}:{self.ollama_port}"
         self.model_name = "gemma2:3b"
         
+        # Setup will happen in test_connection
+        self._setup_ollama()
+        
         # Session for connection pooling
         self.session = requests.Session()
         self.session.timeout = 30
@@ -44,6 +47,40 @@ class GemmaConnector:
         self.test_connection()
         
         logger.info("🧠 Gemma connector initialized")
+    
+    def _setup_ollama(self):
+        """Setup Ollama server and model"""
+        try:
+            # Try to start Ollama server if not running
+            import subprocess
+            import os
+            import time
+            
+            # Check if ollama is available
+            ollama_path = "/tmp/ollama/ollama"
+            if os.path.exists(ollama_path):
+                # Start Ollama server in background
+                try:
+                    subprocess.Popen([ollama_path, "serve"], 
+                                   stdout=subprocess.DEVNULL, 
+                                   stderr=subprocess.DEVNULL)
+                    time.sleep(2)  # Give it time to start
+                    logger.info("🔄 Started Ollama server")
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not start Ollama: {e}")
+            
+            # Try to pull the model
+            try:
+                subprocess.run([ollama_path, "pull", self.model_name], 
+                             timeout=30, 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.DEVNULL)
+                logger.info(f"✅ Gemma model {self.model_name} ready")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not pull Gemma model: {e}")
+                
+        except Exception as e:
+            logger.warning(f"⚠️ Ollama setup failed: {e}")
     
     def test_connection(self):
         """Test connection to Ollama server"""
@@ -331,39 +368,47 @@ Respond naturally and helpfully:"""
         return "I'm analyzing what I can see to help you better."
     
     def _get_fallback_text_response(self, context: Dict[str, Any]) -> str:
-        """Fallback response for text queries"""
+        """Fallback response for text queries - provides immediate responses"""
         user_input = context.get('user_input', '').lower()
         user_name = context.get('user_context', {}).get('name', 'friend')
         intent = context.get('intent', 'general_conversation')
         
+        # Always provide immediate, engaging responses
+        if 'hello' in user_input or 'hi' in user_input or 'hey' in user_input:
+            return f"Hello {user_name}! I'm SeeForMe, your AI assistant. I can help you understand your surroundings, detect emotions, and provide support. What would you like me to help you with?"
+        
+        if 'name' in user_input and ('my' in user_input or 'i am' in user_input or 'i\'m' in user_input):
+            return f"Nice to meet you, {user_name}! I'm excited to be your AI companion. I can see your surroundings, analyze emotions, and have conversations with you."
+        
         # Emotion-based responses
-        if any(word in user_input for word in ['sad', 'upset', 'angry', 'frustrated', 'worried']):
-            return f"I understand you're going through a difficult time, {user_name}. I'm here to listen and support you."
+        if any(word in user_input for word in ['sad', 'upset', 'angry', 'frustrated', 'worried', 'depressed', 'down']):
+            return f"I can hear that you might be going through something difficult, {user_name}. I'm here to listen and support you. Would you like me to look at your expression to better understand how you're feeling?"
         
-        if any(word in user_input for word in ['happy', 'excited', 'good', 'great', 'wonderful']):
-            return f"I'm so glad to hear you're feeling good, {user_name}! That's wonderful."
+        if any(word in user_input for word in ['happy', 'excited', 'good', 'great', 'wonderful', 'amazing', 'fantastic']):
+            return f"That's wonderful to hear, {user_name}! I'm so glad you're feeling positive. Your happiness makes me happy too!"
         
-        # Intent-based responses
-        responses = {
-            'scene_analysis': [
-                f"I'm ready to describe your surroundings, {user_name}. Let me analyze what's around you.",
-                "I'll look around and tell you what I can see in your environment.",
-                "Let me check what's in your surroundings and describe it for you."
-            ],
-            'emotion_analysis': [
-                f"I'll check your expression to understand how you're feeling, {user_name}.",
-                "Let me look at your face and tell you about your current expression.",
-                "I'll analyze your facial expression to understand your mood."
-            ],
-            'general_conversation': [
-                f"Hello {user_name}! I'm here to help you understand your surroundings and provide support.",
-                f"Hi {user_name}! I'm listening and ready to assist you with anything you need.",
-                f"I'm here for you, {user_name}. How can I help you today?"
-            ]
-        }
+        # Scene/vision requests
+        if any(phrase in user_input for phrase in ['what do you see', 'what\'s there', 'look around', 'describe', 'where am i']):
+            return f"I'd love to help you see your surroundings, {user_name}! Let me switch to the back camera and analyze what's around you."
+        
+        # Emotion/self requests  
+        if any(phrase in user_input for phrase in ['how do i look', 'my expression', 'my face', 'my mood', 'how am i']):
+            return f"I can help you understand your current expression and mood, {user_name}. Let me look at your face using the front camera."
+        
+        # Help requests
+        if any(word in user_input for word in ['help', 'assist', 'support', 'guide']):
+            return f"I'm here to help you, {user_name}! I can describe your surroundings, analyze your emotions, have conversations, and provide support. Just tell me what you need!"
+        
+        # General conversation responses
+        responses = [
+            f"I'm listening, {user_name}. Tell me more about what's on your mind.",
+            f"That's interesting, {user_name}. I'm here to chat and help however I can.",
+            f"Thanks for sharing with me, {user_name}. How can I best support you right now?",
+            f"I appreciate you talking with me, {user_name}. What would you like to discuss or explore together?"
+        ]
         
         import random
-        return random.choice(responses.get(intent, responses['general_conversation']))
+        return random.choice(responses)
     
     def get_status(self) -> Dict[str, Any]:
         """Get connector status"""

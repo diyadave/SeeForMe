@@ -19,6 +19,7 @@ dependencies = [
     "pyttsx3>=2.99",
     "gtts>=2.5.4",
     "pygame>=2.6.1",
+    "google-genai>=1.28.0",
 ]
 
 [[tool.uv.index]]
