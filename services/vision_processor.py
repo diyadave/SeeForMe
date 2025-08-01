@@ -67,14 +67,31 @@ class VisionProcessor:
     def get_current_frame(self):
         """Get the current camera frame for processing"""
         try:
-            # In a real implementation, this would capture from the camera
-            # For now, return a simulated frame or None for demo purposes
+            # Real camera implementation for local deployment
+            # DroidCam usually appears as video device 2 on most systems
+            # You can adjust the camera index based on your setup:
+            # 0 = default camera, 1 = secondary camera, 2 = DroidCam
+            
+            camera_index = 0  # Change to 2 for DroidCam
+            if self.current_camera == "back":
+                camera_index = 2  # DroidCam or external camera for back view
+            
+            cap = cv2.VideoCapture(camera_index)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                cap.release()
+                if ret:
+                    return frame
+                    
+            # Fallback to mock frame for development
             import numpy as np
-            # Return mock frame data - in real app this would be from cv2.VideoCapture
-            return np.zeros((480, 640, 3), dtype=np.uint8)  # Mock frame
+            return np.zeros((480, 640, 3), dtype=np.uint8)
+            
         except Exception as e:
             logger.error(f"❌ Failed to get camera frame: {e}")
-            return None
+            # Return mock frame as fallback
+            import numpy as np
+            return np.zeros((480, 640, 3), dtype=np.uint8)
         
     def detect_emotion_from_face(self, frame):
         """Advanced emotion detection from facial expressions"""
