@@ -65,7 +65,7 @@ class VisionProcessor:
         logger.info(f"📹 Switched to {camera_type} camera")
         
     def detect_emotion_from_face(self, frame):
-        """Detect emotions from facial expressions"""
+        """Advanced emotion detection from facial expressions"""
         try:
             # Convert to grayscale for face detection
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -94,14 +94,32 @@ class VisionProcessor:
                 emotion = emotion_labels[emotion_idx]
                 confidence = emotion_predictions[0][emotion_idx]
                 
-                return f"{emotion} (confidence: {confidence:.2f})"
+                return f"{emotion}"
             else:
-                # Basic emotion detection using facial features
+                # Advanced facial feature analysis for emotion detection
                 face_area = w * h
-                if face_area > 10000:  # Large face - likely close/engaged
+                
+                # Analyze facial proportions and features
+                face_center_x = x + w // 2
+                face_center_y = y + h // 2
+                
+                # Eye region analysis (upper third of face)
+                eye_region = face_roi[0:h//3, :]
+                eye_brightness = np.mean(eye_region)
+                
+                # Mouth region analysis (lower third of face)
+                mouth_region = face_roi[2*h//3:h, :]
+                mouth_brightness = np.mean(mouth_region)
+                
+                # Basic emotion classification based on facial geometry
+                if mouth_brightness > eye_brightness + 10:
+                    return "happy"  # Mouth area brighter (smile)
+                elif eye_brightness < 80:  # Dark eye area
+                    return "sad"
+                elif face_area > 15000:  # Large, close face
                     return "engaged"
-                elif face_area < 5000:  # Small face - likely distant
-                    return "distant"
+                elif mouth_brightness < eye_brightness - 10:
+                    return "concerned"
                 else:
                     return "neutral"
                     
@@ -262,25 +280,44 @@ class VisionProcessor:
             }
     
     def get_intelligent_camera_response(self, user_text):
-        """Automatically switch camera and analyze based on user input"""
-        # Determine which camera to use based on user input
-        emotion_keywords = ["feel", "emotion", "mood", "happy", "sad", "angry", "upset"]
-        scene_keywords = ["see", "look", "around", "here", "what", "where", "describe", "environment"]
+        """Automatically switch camera and analyze based on user input with conversational emotion detection"""
+        # Enhanced keyword detection for automatic camera switching
+        emotion_keywords = ["feel", "emotion", "mood", "happy", "sad", "angry", "upset", "stressed", "anxious", "excited", "worried", "tired"]
+        scene_keywords = ["see", "look", "around", "here", "what", "where", "describe", "environment", "room", "place", "outside", "view"]
+        greeting_keywords = ["hello", "hi", "hey", "good morning", "good evening", "how are you"]
         
         user_text_lower = user_text.lower()
         
-        if any(keyword in user_text_lower for keyword in emotion_keywords):
-            # User asking about emotions - use front camera
+        # Always do emotion check for greetings and emotional conversations
+        if any(keyword in user_text_lower for keyword in greeting_keywords) or any(keyword in user_text_lower for keyword in emotion_keywords):
             logger.info("🎭 Switching to front camera for emotion detection")
             result_type, result_data = self.process_camera_frame("front")
             
             if result_type == "emotion_detected":
                 emotion_analysis = self.analyze_with_emotion_context(user_text, result_data)
+                
+                # Generate conversational emotion response
+                facial_emotion = emotion_analysis['facial_emotion']
+                voice_emotion = emotion_analysis['voice_emotion']
+                
+                if facial_emotion == "sad" or voice_emotion == "sad":
+                    emotion_response = "I can see you're looking a little sad. What happened? Please share with me."
+                elif facial_emotion == "happy" or voice_emotion == "happy":
+                    emotion_response = "I can see you're looking bright and happy today! That's wonderful to see."
+                elif facial_emotion == "angry" or voice_emotion == "angry":
+                    emotion_response = "I notice you seem upset or frustrated. I'm here to listen - what's bothering you?"
+                elif facial_emotion == "concerned" or voice_emotion == "concerned":
+                    emotion_response = "You look a bit worried or concerned. Is something on your mind that you'd like to talk about?"
+                elif facial_emotion == "engaged":
+                    emotion_response = "I can see you're focused and engaged. How are you feeling today?"
+                else:
+                    emotion_response = f"I can see your facial expression and sense your {voice_emotion if voice_emotion != 'neutral' else 'calm'} mood."
+                
                 return {
                     'camera_used': 'front',
                     'analysis_type': 'emotion',
                     'emotion_data': emotion_analysis,
-                    'description': f"I can see your facial expression shows {emotion_analysis['facial_emotion']}, and from your voice I detect {emotion_analysis['voice_emotion']} emotions."
+                    'description': emotion_response
                 }
                 
         elif any(keyword in user_text_lower for keyword in scene_keywords):
@@ -297,16 +334,17 @@ class VisionProcessor:
                     'description': result_data
                 }
         
-        # Default: Quick emotion check for supportive responses
+        # For any other conversation, do a quick emotion check
         result_type, result_data = self.process_camera_frame("front")
         if result_type == "emotion_detected":
             emotion_analysis = self.analyze_with_emotion_context(user_text, result_data)
-            return {
-                'camera_used': 'front',
-                'analysis_type': 'emotion_check',
-                'emotion_data': emotion_analysis,
-                'description': f"I can sense you're feeling {emotion_analysis['combined_emotion']}."
-            }
+            if emotion_analysis['facial_emotion'] != "neutral" and emotion_analysis['facial_emotion'] != "no_face_detected":
+                return {
+                    'camera_used': 'front',
+                    'analysis_type': 'emotion_background',
+                    'emotion_data': emotion_analysis,
+                    'description': f"I notice you're looking {emotion_analysis['facial_emotion']}."
+                }
         
         return None
 

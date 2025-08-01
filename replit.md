@@ -11,6 +11,8 @@ SeeForMe is a fully offline smart assistant application designed specifically fo
 
 **Recent Success**: Core conversational features working perfectly! User tested with "hello my name is Diya", "I am feeling sad", and "someone scold me today" - all responded intelligently with proper name recognition and emotional support.
 
+**User PC Configuration**: User has Gemma3n:latest (7.5 GB) installed on their PC. When code is downloaded and run locally, it will use their Gemma3n model for responses instead of pattern matching.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
