@@ -1,111 +1,177 @@
 """
-Memory Manager for SeeForMe
-Handles emotional continuity, conversation history, and face recognition
+Offline Memory Manager for SeeForMe
+Stores emotional states and conversation history in local JSON files
+No database dependencies - fully offline and portable
 """
 import json
-import numpy as np
+import os
 from datetime import datetime, timedelta, date
-from typing import Dict, List, Optional, Tuple
-from app import db
-from models import UserSession, ConversationHistory, FaceRecognition, EmotionalMemory
+from typing import Dict, List, Optional, Any
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-class MemoryManager:
-    """Manages all memory functions for emotional continuity and face recognition"""
+class OfflineMemoryManager:
+    """Manages emotional continuity and conversation history using local JSON files"""
     
-    def __init__(self):
-        self.current_user = "friend"
-        self.face_encodings_cache = {}  # In-memory cache for faster lookup
-        self.load_face_encodings()
+    def __init__(self, data_dir: str = "memory_data"):
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(exist_ok=True)
+        
+        # File paths for different data types
+        self.conversations_file = self.data_dir / "conversations.json"
+        self.emotions_file = self.data_dir / "emotional_states.json"
+        self.user_profiles_file = self.data_dir / "user_profiles.json"
+        
+        # In-memory cache for faster access
+        self.conversations_cache = self._load_conversations()
+        self.emotions_cache = self._load_emotions()
+        self.user_profiles_cache = self._load_user_profiles()
+        
+        logger.info(f"💾 Offline memory manager initialized at {self.data_dir}")
+    
+    def _load_conversations(self) -> List[Dict]:
+        """Load conversation history from JSON file"""
+        try:
+            if self.conversations_file.exists():
+                with open(self.conversations_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return []
+        except Exception as e:
+            logger.error(f"❌ Failed to load conversations: {e}")
+            return []
+    
+    def _save_conversations(self):
+        """Save conversation history to JSON file"""
+        try:
+            with open(self.conversations_file, 'w', encoding='utf-8') as f:
+                json.dump(self.conversations_cache, f, indent=2, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.error(f"❌ Failed to save conversations: {e}")
+    
+    def _load_emotions(self) -> Dict[str, Dict]:
+        """Load emotional states from JSON file"""
+        try:
+            if self.emotions_file.exists():
+                with open(self.emotions_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return {}
+        except Exception as e:
+            logger.error(f"❌ Failed to load emotions: {e}")
+            return {}
+    
+    def _save_emotions(self):
+        """Save emotional states to JSON file"""
+        try:
+            with open(self.emotions_file, 'w', encoding='utf-8') as f:
+                json.dump(self.emotions_cache, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"❌ Failed to save emotions: {e}")
+    
+    def _load_user_profiles(self) -> Dict[str, Dict]:
+        """Load user profiles from JSON file"""
+        try:
+            if self.user_profiles_file.exists():
+                with open(self.user_profiles_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return {}
+        except Exception as e:
+            logger.error(f"❌ Failed to load user profiles: {e}")
+            return {}
+    
+    def _save_user_profiles(self):
+        """Save user profiles to JSON file"""
+        try:
+            with open(self.user_profiles_file, 'w', encoding='utf-8') as f:
+                json.dump(self.user_profiles_cache, f, indent=2, ensure_ascii=False, default=str)
+        except Exception as e:
+            logger.error(f"❌ Failed to save user profiles: {e}")
     
     def save_conversation(self, user_name: str, user_input: str, ai_response: str, emotion_detected: str = None):
-        """Save conversation to database for memory continuity"""
+        """Save conversation to local JSON for memory continuity"""
         try:
-            conversation = ConversationHistory(
-                user_name=user_name,
-                user_input=user_input,
-                ai_response=ai_response,
-                emotion_detected=emotion_detected,
-                timestamp=datetime.utcnow()
-            )
-            db.session.add(conversation)
-            db.session.commit()
+            conversation_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'user_name': user_name,
+                'user_input': user_input,
+                'ai_response': ai_response,
+                'emotion_detected': emotion_detected,
+                'date': date.today().isoformat()
+            }
+            
+            self.conversations_cache.append(conversation_entry)
+            
+            # Keep only last 1000 conversations to prevent file growth
+            if len(self.conversations_cache) > 1000:
+                self.conversations_cache = self.conversations_cache[-1000:]
+            
+            self._save_conversations()
             logger.info(f"💾 Saved conversation for {user_name}")
+            
         except Exception as e:
             logger.error(f"❌ Failed to save conversation: {e}")
-            db.session.rollback()
     
     def save_emotional_state(self, user_name: str, emotion: str, intensity: float = 0.5, context: str = None):
         """Save user's emotional state for future reference"""
         try:
-            today = date.today()
+            today = date.today().isoformat()
             
-            # Check if emotional memory exists for today
-            existing_memory = EmotionalMemory.query.filter_by(
-                user_name=user_name,
-                date=today
-            ).first()
+            if user_name not in self.emotions_cache:
+                self.emotions_cache[user_name] = {}
             
-            if existing_memory:
-                # Update existing emotional state
-                existing_memory.dominant_emotion = emotion
-                existing_memory.emotion_intensity = intensity
-                existing_memory.context_description = context
-                existing_memory.resolution_status = "ongoing"
-            else:
-                # Create new emotional memory
-                emotional_memory = EmotionalMemory(
-                    user_name=user_name,
-                    date=today,
-                    dominant_emotion=emotion,
-                    emotion_intensity=intensity,
-                    context_description=context,
-                    resolution_status="ongoing"
-                )
-                db.session.add(emotional_memory)
+            # Update or create emotional state for today
+            self.emotions_cache[user_name][today] = {
+                'emotion': emotion,
+                'intensity': intensity,
+                'context': context,
+                'timestamp': datetime.now().isoformat(),
+                'resolution_status': 'ongoing'
+            }
             
-            db.session.commit()
+            self._save_emotions()
             logger.info(f"💭 Saved emotional state: {emotion} for {user_name}")
+            
         except Exception as e:
             logger.error(f"❌ Failed to save emotional state: {e}")
-            db.session.rollback()
     
-    def get_emotional_continuity(self, user_name: str) -> str:
+    def get_emotional_continuity(self, user_name: str) -> Optional[str]:
         """Get emotional context from previous sessions for continuity"""
         try:
-            # Get yesterday's emotional state
-            yesterday = date.today() - timedelta(days=1)
-            yesterday_emotion = EmotionalMemory.query.filter_by(
-                user_name=user_name,
-                date=yesterday
-            ).first()
+            if user_name not in self.emotions_cache:
+                return None
             
-            if yesterday_emotion and yesterday_emotion.resolution_status != "resolved":
-                emotion = yesterday_emotion.dominant_emotion
-                context = yesterday_emotion.context_description or ""
+            user_emotions = self.emotions_cache[user_name]
+            
+            # Check yesterday's emotional state
+            yesterday = (date.today() - timedelta(days=1)).isoformat()
+            if yesterday in user_emotions:
+                yesterday_emotion = user_emotions[yesterday]
+                emotion = yesterday_emotion['emotion']
+                resolution_status = yesterday_emotion.get('resolution_status', 'ongoing')
                 
-                if emotion == "sad":
-                    return f"Yesterday you weren't feeling well and seemed sad. How are you feeling today? Are you alright now? Share with me what you did today."
-                elif emotion == "angry":
-                    return f"Yesterday you seemed upset about something. I hope things are better today. How are you feeling now?"
-                elif emotion == "worried":
-                    return f"Yesterday you seemed concerned about something. Is everything okay today? How did things go?"
-                elif emotion == "happy":
-                    return f"Yesterday you were in such a good mood! I hope your day continued to be wonderful. How are you feeling today?"
-                else:
-                    return f"Yesterday you were feeling {emotion}. How are you doing today? Tell me about your day."
+                if resolution_status != 'resolved':
+                    if emotion == "sad":
+                        return f"Yesterday you weren't feeling well and seemed sad. How are you feeling today? Are you alright now? Share with me what you did today."
+                    elif emotion == "angry":
+                        return f"Yesterday you seemed upset about something. I hope things are better today. How are you feeling now?"
+                    elif emotion == "worried":
+                        return f"Yesterday you seemed concerned about something. Is everything okay today? How did things go?"
+                    elif emotion == "happy":
+                        return f"Yesterday you were in such a good mood! I hope your day continued to be wonderful. How are you feeling today?"
+                    else:
+                        return f"Yesterday you were feeling {emotion}. How are you doing today? Tell me about your day."
             
-            # Check for recent conversations in the last 24 hours
-            recent_conversations = ConversationHistory.query.filter(
-                ConversationHistory.user_name == user_name,
-                ConversationHistory.timestamp >= datetime.utcnow() - timedelta(hours=24)
-            ).order_by(ConversationHistory.timestamp.desc()).limit(3).all()
-            
+            # Check for recent emotional conversations in last 24 hours
+            recent_conversations = self.get_conversation_context(user_name, limit=3)
             if recent_conversations:
-                last_emotion = recent_conversations[0].emotion_detected
-                if last_emotion and last_emotion in ["sad", "angry", "worried"]:
+                last_emotion = None
+                for conv in reversed(recent_conversations):
+                    if conv.get('emotion_detected') and conv['emotion_detected'] in ["sad", "angry", "worried"]:
+                        last_emotion = conv['emotion_detected']
+                        break
+                
+                if last_emotion:
                     return f"Last time we talked, you seemed {last_emotion}. I've been thinking about you. How are you feeling now?"
             
             return None
@@ -114,109 +180,92 @@ class MemoryManager:
             logger.error(f"❌ Failed to get emotional continuity: {e}")
             return None
     
-    def save_face_encoding(self, person_name: str, face_encoding: np.ndarray, relationship: str = "unknown"):
-        """Save face encoding for person recognition"""
+    def get_conversation_context(self, user_name: str, limit: int = 5) -> List[Dict]:
+        """Get recent conversation history for context"""
         try:
-            # Convert numpy array to JSON string
-            encoding_json = json.dumps(face_encoding.tolist())
+            # Filter conversations for this user from the last 7 days
+            cutoff_date = (date.today() - timedelta(days=7)).isoformat()
             
-            # Check if person already exists
-            existing_person = FaceRecognition.query.filter_by(person_name=person_name).first()
+            user_conversations = [
+                conv for conv in self.conversations_cache
+                if conv['user_name'] == user_name and conv['date'] >= cutoff_date
+            ]
             
-            if existing_person:
-                # Update existing person
-                existing_person.face_encoding = encoding_json
-                existing_person.last_seen = datetime.utcnow()
-                existing_person.interaction_count += 1
-            else:
-                # Create new person entry
-                face_record = FaceRecognition(
-                    person_name=person_name,
-                    face_encoding=encoding_json,
-                    first_seen=datetime.utcnow(),
-                    last_seen=datetime.utcnow(),
-                    interaction_count=1,
-                    relationship_notes=relationship
-                )
-                db.session.add(face_record)
-            
-            db.session.commit()
-            
-            # Update cache
-            self.face_encodings_cache[person_name] = face_encoding
-            logger.info(f"👤 Saved face encoding for {person_name}")
+            # Sort by timestamp and return latest conversations
+            user_conversations.sort(key=lambda x: x['timestamp'], reverse=True)
+            return user_conversations[:limit]
             
         except Exception as e:
-            logger.error(f"❌ Failed to save face encoding: {e}")
-            db.session.rollback()
+            logger.error(f"❌ Failed to get conversation context: {e}")
+            return []
     
-    def load_face_encodings(self):
-        """Load all face encodings into memory cache for faster recognition"""
+    def update_user_profile(self, user_name: str, profile_data: Dict[str, Any]):
+        """Update user profile information"""
         try:
-            all_faces = FaceRecognition.query.all()
-            self.face_encodings_cache = {}
+            if user_name not in self.user_profiles_cache:
+                self.user_profiles_cache[user_name] = {
+                    'created_date': date.today().isoformat(),
+                    'last_seen': datetime.now().isoformat()
+                }
             
-            for face_record in all_faces:
-                encoding_list = json.loads(face_record.face_encoding)
-                encoding_array = np.array(encoding_list)
-                self.face_encodings_cache[face_record.person_name] = encoding_array
-                
-            logger.info(f"👥 Loaded {len(self.face_encodings_cache)} face encodings into cache")
+            self.user_profiles_cache[user_name].update(profile_data)
+            self.user_profiles_cache[user_name]['last_seen'] = datetime.now().isoformat()
+            
+            self._save_user_profiles()
+            logger.info(f"👤 Updated profile for {user_name}")
+            
         except Exception as e:
-            logger.error(f"❌ Failed to load face encodings: {e}")
+            logger.error(f"❌ Failed to update user profile: {e}")
     
-    def recognize_face(self, face_encoding: np.ndarray, tolerance: float = 0.6) -> Optional[str]:
-        """Recognize a person from their face encoding"""
-        try:
-            if not self.face_encodings_cache:
-                return None
-            
-            # Calculate distances to all known faces
-            for person_name, known_encoding in self.face_encodings_cache.items():
-                # Calculate Euclidean distance
-                distance = np.linalg.norm(face_encoding - known_encoding)
-                
-                if distance < tolerance:
-                    # Update last seen time
-                    person_record = FaceRecognition.query.filter_by(person_name=person_name).first()
-                    if person_record:
-                        person_record.last_seen = datetime.utcnow()
-                        person_record.interaction_count += 1
-                        db.session.commit()
-                    
-                    logger.info(f"👤 Recognized person: {person_name} (distance: {distance:.3f})")
-                    return person_name
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"❌ Face recognition failed: {e}")
-            return None
+    def get_user_profile(self, user_name: str) -> Dict[str, Any]:
+        """Get user profile information"""
+        return self.user_profiles_cache.get(user_name, {})
     
-    def generate_person_greeting(self, person_name: str) -> str:
-        """Generate appropriate greeting for recognized person"""
+    def mark_emotion_resolved(self, user_name: str, date_str: str = None):
+        """Mark an emotional state as resolved"""
         try:
-            person_record = FaceRecognition.query.filter_by(person_name=person_name).first()
+            if date_str is None:
+                date_str = date.today().isoformat()
             
-            if person_record:
-                interaction_count = person_record.interaction_count
-                last_seen = person_record.last_seen
-                time_since_last_seen = datetime.utcnow() - last_seen
-                
-                if time_since_last_seen.days == 0:
-                    return f"Oh, there is {person_name} looking at you, coming toward you!"
-                elif time_since_last_seen.days == 1:
-                    return f"Hello {person_name}! I see you again. You were here yesterday."
-                elif time_since_last_seen.days < 7:
-                    return f"Hi {person_name}! Good to see you again after {time_since_last_seen.days} days."
-                else:
-                    return f"Oh, it's {person_name}! I haven't seen you in a while. Welcome back!"
-            else:
-                return f"There is {person_name} looking at you, coming toward you!"
+            if user_name in self.emotions_cache and date_str in self.emotions_cache[user_name]:
+                self.emotions_cache[user_name][date_str]['resolution_status'] = 'resolved'
+                self._save_emotions()
+                logger.info(f"✅ Marked emotion resolved for {user_name} on {date_str}")
                 
         except Exception as e:
-            logger.error(f"❌ Failed to generate person greeting: {e}")
-            return f"I see {person_name} approaching you."
+            logger.error(f"❌ Failed to mark emotion resolved: {e}")
+    
+    def cleanup_old_data(self, days_to_keep: int = 30):
+        """Clean up old data to prevent files from growing too large"""
+        try:
+            cutoff_date = (date.today() - timedelta(days=days_to_keep)).isoformat()
+            
+            # Clean old conversations
+            self.conversations_cache = [
+                conv for conv in self.conversations_cache
+                if conv['date'] >= cutoff_date
+            ]
+            
+            # Clean old emotions
+            for user_name in list(self.emotions_cache.keys()):
+                user_emotions = self.emotions_cache[user_name]
+                self.emotions_cache[user_name] = {
+                    date_str: emotion_data
+                    for date_str, emotion_data in user_emotions.items()
+                    if date_str >= cutoff_date
+                }
+                
+                # Remove user if no recent emotions
+                if not self.emotions_cache[user_name]:
+                    del self.emotions_cache[user_name]
+            
+            self._save_conversations()
+            self._save_emotions()
+            
+            logger.info(f"🧹 Cleaned up data older than {days_to_keep} days")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to cleanup old data: {e}")
     
     def process_name_learning(self, user_input: str, detected_faces_count: int) -> Optional[str]:
         """Process when someone says their name to learn new faces"""
@@ -253,29 +302,19 @@ class MemoryManager:
             logger.error(f"❌ Name learning failed: {e}")
             return None
     
-    def get_conversation_context(self, user_name: str, limit: int = 5) -> List[Dict]:
-        """Get recent conversation history for context"""
+    def get_memory_stats(self) -> Dict[str, Any]:
+        """Get statistics about stored memory data"""
         try:
-            recent_conversations = ConversationHistory.query.filter_by(
-                user_name=user_name
-            ).order_by(
-                ConversationHistory.timestamp.desc()
-            ).limit(limit).all()
-            
-            context = []
-            for conv in reversed(recent_conversations):  # Reverse to get chronological order
-                context.append({
-                    'user_input': conv.user_input,
-                    'ai_response': conv.ai_response,
-                    'emotion': conv.emotion_detected,
-                    'timestamp': conv.timestamp
-                })
-            
-            return context
-            
+            return {
+                'total_conversations': len(self.conversations_cache),
+                'total_users': len(self.user_profiles_cache),
+                'users_with_emotions': len(self.emotions_cache),
+                'data_directory': str(self.data_dir),
+                'last_conversation': self.conversations_cache[-1]['timestamp'] if self.conversations_cache else None
+            }
         except Exception as e:
-            logger.error(f"❌ Failed to get conversation context: {e}")
-            return []
+            logger.error(f"❌ Failed to get memory stats: {e}")
+            return {}
 
-# Global memory manager instance
-memory_manager = MemoryManager()
+# Global offline memory manager instance
+offline_memory_manager = OfflineMemoryManager()

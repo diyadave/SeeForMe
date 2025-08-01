@@ -154,11 +154,14 @@ def on_voice_input(data):
     logger.info(f"🗣️ Voice input: '{user_text}' (confidence: {confidence:.2f})")
     print(f"🎯 VOICE INPUT: {user_text}")
     
-    # Extract name properly using memory manager
-    from services.memory_manager import memory_manager
+    # Extract name properly using offline memory manager
+    from services.memory_manager import offline_memory_manager
     import re
     user_name = "friend"
-    if "my name is" in user_text.lower():
+    extracted_name = offline_memory_manager.process_name_learning(user_text, 1)
+    if extracted_name:
+        user_name = extracted_name
+    elif "my name is" in user_text.lower():
         match = re.search(r"my name is\s+(\w+)", user_text.lower())
         if match:
             user_name = match.group(1).capitalize()
@@ -168,7 +171,7 @@ def on_voice_input(data):
             user_name = match.group(1).capitalize()
     
     # Check for emotional continuity from previous sessions
-    emotional_continuity = memory_manager.get_emotional_continuity(user_name)
+    emotional_continuity = offline_memory_manager.get_emotional_continuity(user_name)
     if emotional_continuity:
         response = emotional_continuity
         print(f"💭 EMOTIONAL CONTINUITY: {response[:50]}...")
@@ -179,7 +182,7 @@ def on_voice_input(data):
             import requests
             
             # Get conversation context for better responses
-            conversation_context = memory_manager.get_conversation_context(user_name, limit=3)
+            conversation_context = offline_memory_manager.get_conversation_context(user_name, limit=3)
             context_prompt = ""
             if conversation_context:
                 context_prompt = " Previous context: " + "; ".join([f"User: {c['user_input']}, AI: {c['ai_response']}" for c in conversation_context[-2:]])
@@ -232,7 +235,7 @@ def on_voice_input(data):
     vision_analysis = None
     try:
         from services.vision_processor import vision_processor
-        from services.face_recognition_service import face_recognition_service
+        from services.face_memory import offline_face_memory
         
         vision_analysis = vision_processor.get_intelligent_camera_response(user_text)
         if vision_analysis:
@@ -243,7 +246,7 @@ def on_voice_input(data):
                 try:
                     # Simulate face detection in back camera for person recognition
                     # In real implementation, this would use actual camera frame
-                    face_count, recognized_names, face_description = face_recognition_service.process_faces_in_scene(
+                    face_count, recognized_names, face_description = offline_face_memory.process_scene_with_faces(
                         None, user_text  # None frame for simulation
                     )
                     
@@ -260,14 +263,14 @@ def on_voice_input(data):
     except Exception as e:
         print(f"⚠️ Vision processing error: {e}")
     
-    # Save conversation and emotional state to memory
+    # Save conversation and emotional state to offline memory
     try:
-        memory_manager.save_conversation(user_name, user_text, response, detected_emotion)
+        offline_memory_manager.save_conversation(user_name, user_text, response, detected_emotion)
         if detected_emotion and detected_emotion != "neutral":
-            memory_manager.save_emotional_state(user_name, detected_emotion, 0.7, user_text)
-        print(f"💾 SAVED TO MEMORY: {user_name} conversation and emotion")
+            offline_memory_manager.save_emotional_state(user_name, detected_emotion, 0.7, user_text)
+        print(f"💾 SAVED TO OFFLINE MEMORY: {user_name} conversation and emotion")
     except Exception as memory_error:
-        print(f"❌ Memory save error: {memory_error}")
+        print(f"❌ Offline memory save error: {memory_error}")
     
     # Send response immediately
     emit('assistant_response', {
