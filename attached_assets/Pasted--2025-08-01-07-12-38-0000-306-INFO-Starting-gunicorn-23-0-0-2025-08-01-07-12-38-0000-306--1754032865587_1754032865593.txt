@@ -1,0 +1,41 @@
+[2025-08-01 07:12:38 +0000] [306] [INFO] Starting gunicorn 23.0.0
+[2025-08-01 07:12:38 +0000] [306] [INFO] Listening at: http://0.0.0.0:5000 (306)
+[2025-08-01 07:12:38 +0000] [306] [INFO] Using worker: sync
+[2025-08-01 07:12:38 +0000] [317] [INFO] Booting worker with pid: 317
+[2025-08-01 07:12:40 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:40 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:40 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:41 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:41 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:41 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:41 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:41 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:41 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:42 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:42 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:42 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:42 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:42 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:42 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:43 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:43 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:43 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:43 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:43 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:43 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:44 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:44 +0000] [306] [INFO] Handling signal: winch
+[2025-08-01 07:12:44 +0000] [306] [INFO] Handling signal: winch
+2025-08-01 07:12:47,117 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+2025-08-01 07:13:26,877 - app - INFO - ❌ SeeForMe client disconnected
+Invalid session RpgFAXBzJcjQ9xgFAAAA (further occurrences of this error will be logged with level INFO)
+2025-08-01 07:13:26,878 - engineio.server - ERROR - Invalid session RpgFAXBzJcjQ9xgFAAAA (further occurrences of this error will be logged with level INFO)
+2025-08-01 07:13:28,805 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+2025-08-01 07:15:02,436 - app - INFO - ❌ SeeForMe client disconnected
+2025-08-01 07:15:04,783 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
+2025-08-01 07:16:22,571 - app - INFO - ❌ SeeForMe client disconnected
+2025-08-01 07:16:24,805 - app - INFO - 🔗 SeeForMe client connected
+🔗 BACKEND: Client connected, handlers available: ['/']
