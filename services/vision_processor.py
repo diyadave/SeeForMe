@@ -63,6 +63,18 @@ class VisionProcessor:
         """Switch between front and back camera"""
         self.current_camera = camera_type
         logger.info(f"📹 Switched to {camera_type} camera")
+    
+    def get_current_frame(self):
+        """Get the current camera frame for processing"""
+        try:
+            # In a real implementation, this would capture from the camera
+            # For now, return a simulated frame or None for demo purposes
+            import numpy as np
+            # Return mock frame data - in real app this would be from cv2.VideoCapture
+            return np.zeros((480, 640, 3), dtype=np.uint8)  # Mock frame
+        except Exception as e:
+            logger.error(f"❌ Failed to get camera frame: {e}")
+            return None
         
     def detect_emotion_from_face(self, frame):
         """Advanced emotion detection from facial expressions"""

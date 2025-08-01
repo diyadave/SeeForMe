@@ -9,6 +9,8 @@ import logging
 import time
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 import threading
 
 # Configure logging
@@ -18,9 +20,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Database setup
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
+
 # Create Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "seefor_me_accessibility_2024")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+
+# Initialize database
+db.init_app(app)
 
 # Initialize SocketIO - SUPER FAST setup for instant responses
 socketio = SocketIO(app, 
@@ -138,7 +154,8 @@ def on_voice_input(data):
     logger.info(f"🗣️ Voice input: '{user_text}' (confidence: {confidence:.2f})")
     print(f"🎯 VOICE INPUT: {user_text}")
     
-    # Extract name properly
+    # Extract name properly using memory manager
+    from services.memory_manager import memory_manager
     import re
     user_name = "friend"
     if "my name is" in user_text.lower():
@@ -150,27 +167,40 @@ def on_voice_input(data):
         if match:
             user_name = match.group(1).capitalize()
     
-    # Try Gemma2:2b first, then fall back to enhanced patterns
-    response = ""
-    try:
-        import requests
-        gemma_response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": "gemma3n",
-                "prompt": f"You are a caring AI companion for blind users. A user named {user_name} just said: \"{user_text}\". Respond with empathy and support in 2-3 sentences.",
-                "stream": False
-            },
-            timeout=5
-        )
-        if gemma_response.status_code == 200:
-            gemma_data = gemma_response.json()
-            if gemma_data.get('response'):
-                response = gemma_data['response'].strip()
-                print(f"🤖 GEMMA3N NANO SUCCESS: {response[:50]}...")
-    except Exception as e:
-        print(f"⚠️ Gemma3n nano not available: {e}")
-        print("🔍 DEBUG: Ollama server status and model availability")
+    # Check for emotional continuity from previous sessions
+    emotional_continuity = memory_manager.get_emotional_continuity(user_name)
+    if emotional_continuity:
+        response = emotional_continuity
+        print(f"💭 EMOTIONAL CONTINUITY: {response[:50]}...")
+    else:
+        # Try Gemma3n first, then fall back to enhanced patterns  
+        response = ""
+        try:
+            import requests
+            
+            # Get conversation context for better responses
+            conversation_context = memory_manager.get_conversation_context(user_name, limit=3)
+            context_prompt = ""
+            if conversation_context:
+                context_prompt = " Previous context: " + "; ".join([f"User: {c['user_input']}, AI: {c['ai_response']}" for c in conversation_context[-2:]])
+            
+            gemma_response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "gemma3n",
+                    "prompt": f"You are a caring AI companion for blind users. A user named {user_name} just said: \"{user_text}\". Respond with empathy and support in 2-3 sentences.{context_prompt}",
+                    "stream": False
+                },
+                timeout=5
+            )
+            if gemma_response.status_code == 200:
+                gemma_data = gemma_response.json()
+                if gemma_data.get('response'):
+                    response = gemma_data['response'].strip()
+                    print(f"🤖 GEMMA3N NANO SUCCESS: {response[:50]}...")
+        except Exception as e:
+            print(f"⚠️ Gemma3n nano not available: {e}")
+            print("🔍 DEBUG: Ollama server status and model availability")
     
     # Enhanced pattern matching fallback (if Gemma fails)
     if not response:
@@ -198,25 +228,46 @@ def on_voice_input(data):
     elif any(word in user_text.lower() for word in ["happy", "good", "great", "wonderful"]):
         detected_emotion = "happy"
     
-    # Get vision analysis if available
+    # Get vision analysis with face recognition and scene description
     vision_analysis = None
     try:
         from services.vision_processor import vision_processor
+        from services.face_recognition_service import face_recognition_service
+        
         vision_analysis = vision_processor.get_intelligent_camera_response(user_text)
         if vision_analysis:
-            # Enhance response with vision context
             vision_desc = vision_analysis.get('description', '')
+            
+            # Enhanced scene analysis with face recognition for back camera
+            if vision_analysis.get('analysis_type') == 'scene' and vision_analysis.get('camera_used') == 'back':
+                try:
+                    # Simulate face detection in back camera for person recognition
+                    # In real implementation, this would use actual camera frame
+                    face_count, recognized_names, face_description = face_recognition_service.process_faces_in_scene(
+                        None, user_text  # None frame for simulation
+                    )
+                    
+                    if face_count > 0:
+                        vision_desc = f"{vision_desc} {face_description}"
+                        for name in recognized_names:
+                            print(f"👤 RECOGNIZED: {name}")
+                except Exception as face_error:
+                    print(f"❌ Face recognition error: {face_error}")
+            
             if vision_desc and len(vision_desc) > 10:
-                # For emotion detection, replace or enhance the response
-                if vision_analysis.get('analysis_type') == 'emotion':
-                    response = f"{response} {vision_desc}"
-                elif vision_analysis.get('analysis_type') == 'scene':
-                    response = f"{response} {vision_desc}"
-                else:
-                    response = f"{response} {vision_desc}"
+                response = f"{response} {vision_desc}"
                 print(f"👁️ VISION: {vision_analysis['analysis_type']} using {vision_analysis['camera_used']} camera")
     except Exception as e:
         print(f"⚠️ Vision processing error: {e}")
+    
+    # Save conversation and emotional state to memory
+    try:
+        memory_manager.save_conversation(user_name, user_text, response, detected_emotion)
+        if detected_emotion and detected_emotion != "neutral":
+            memory_manager.save_emotional_state(user_name, detected_emotion, 0.7, user_text)
+        print(f"💾 SAVED TO MEMORY: {user_name} conversation and emotion")
+    except Exception as memory_error:
+        print(f"❌ Memory save error: {memory_error}")
     
     # Send response immediately
     emit('assistant_response', {
