@@ -26,7 +26,7 @@ class Gemma3nConnector:
         self.ollama_host = os.getenv('OLLAMA_HOST', 'localhost')
         self.ollama_port = os.getenv('OLLAMA_PORT', '11434')
         self.base_url = f"http://{self.ollama_host}:{self.ollama_port}"
-        self.model_name = "gemma2:3b"  # Gemma 3n model identifier
+        self.model_name = "gemma3n:latest"  # Gemma 3n model identifier
         
         # Connection management
         self.session = requests.Session()
