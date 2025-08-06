@@ -109,9 +109,9 @@ class VoskSpeechRecognizer:
         
         # Expected model directories
         model_dirs = {
-            'en': self.model_path / 'vosk-model-en-us-0.22',
-            'hi': self.model_path / 'vosk-model-hi-0.22',
-            'gu': self.model_path / 'vosk-model-small-en-us-0.15'  # Use English small model for Gujarati
+            'en': self.model_path / 'vosk-model-small-en-us-0.15',
+            'hi': self.model_path / 'vosk-model-small-hi-0.22',
+            'gu': self.model_path / 'vosk-model-small-gujarati-0.4'  # Use English small model for Gujarati
         }
         
         # Also check for any available models
